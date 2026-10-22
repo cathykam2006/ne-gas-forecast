@@ -15,14 +15,22 @@ Gas utilities plan supply portfolios, storage and pipeline capacity around winte
 
 ## Results
 
-_Fill in after running the pipeline on real data (`data/processed/demand_scores.csv`, `price_scores_h4.csv`):_
+Backtests on data through July 2026 (demand) and October 2026 (price):
 
-| | Best model | Backtest accuracy | vs. benchmark |
+| Forecast | Best model | Out-of-sample accuracy | vs. benchmark |
 |---|---|---|---|
-| MA demand, 1–12 mo, normal weather | … | MAPE …% | …% better than seasonal naive |
-| Henry Hub, 4 weeks | … | RMSE $… | …% vs. random walk (DM p = …) |
+| MA utility gas demand, 1–12 months, normal weather | SARIMAX | 8.1% MAPE | 18% better than seasonal naive |
+| Same, with actual weather (model skill only) | LightGBM / SARIMAX | 5.9% MAPE | 40% better than seasonal naive |
+| Henry Hub, 1 week ahead | Ridge (fundamentals) | 0.9% lower RMSE than random walk | statistically significant (DM p = 0.03) |
+| Henry Hub, 4 weeks ahead | Ridge (momentum) | 6.4% lower RMSE than random walk | 55% direction hit rate; not significant (p = 0.31) |
 
-Key findings: weather sensitivity of ~… MMcf per HDD; a cold (P90) winter adds ~…% to Nov–Mar demand; weather-normalized demand trend of …% per year.
+**Key findings**
+- **Weather sensitivity:** each heating degree day adds about 30 MMcf of utility gas demand.
+- **Winter outlook:** about 183 Bcf of utility demand in a normal winter; a cold (P90) winter adds about 9%.
+- **Structural trend:** weather-normalized demand has been roughly flat (−0.3% a year) over the last decade.
+- **Weather dominates forecast error:** with weather known, error falls from 8.1% to 5.9%, so better weather forecasts would help more than more complex models.
+- **Prices:** fundamentals give a small but statistically real edge at one week; nothing reliably beats a random walk at four weeks, consistent with an efficient market.
+- **What didn't work:** news-based geopolitical and trade-policy risk indices (tested separately) did not improve the price forecast, and Prophet underperformed the naive benchmark on demand because its trend extrapolation overshoots.
 
 ## Approach
 
