@@ -81,14 +81,47 @@ def fetch_eia_series(series_id: str, start: str = config.START_DATE,
     return s[s.index >= pd.Timestamp(start)].dropna()
 
 
-def fetch_ma_consumption(api_key: str | None = None) -> pd.DataFrame:
-    """Monthly MA deliveries by end use (MMcf)."""
-    cols = {name: fetch_eia_series(sid, api_key=api_key)
-            for name, sid in config.MA_CONSUMPTION_SERIES.items()}
+def fetch_state_consumption(state: str, api_key: str | None = None) -> pd.DataFrame:
+    """Monthly deliveries by end use (MMcf) for one state.
+
+    Electric-power deliveries are missing or 'not applicable' for some small
+    states; that column is optional (the demand target excludes it anyway).
+    """
+    cols = {}
+    for name, sid in config.consumption_series(state).items():
+        try:
+            cols[name] = fetch_eia_series(sid, api_key=api_key)
+        except RuntimeError:
+            if name in ("electric_power", "total"):
+                print(f"  {state} {name}: no data, skipped")
+                continue
+            raise
     df = pd.DataFrame(cols)
     df.index = df.index.to_period("M").to_timestamp()
     df.index.name = "month"
     return df
+
+
+def fetch_ma_consumption(api_key: str | None = None) -> pd.DataFrame:
+    return fetch_state_consumption("MA", api_key)
+
+
+def state_files(state: str):
+    st = state.lower()
+    return config.RAW_DIR / f"{st}_consumption.csv", config.RAW_DIR / f"weather_{st}.csv"
+
+
+def pull_states(api_key: str | None = None, only_missing: bool = False) -> None:
+    """Consumption and weighted degree days for every New England state."""
+    config.RAW_DIR.mkdir(parents=True, exist_ok=True)
+    for state, meta in config.STATES.items():
+        cons_f, wx_f = state_files(state)
+        if only_missing and cons_f.exists() and wx_f.exists():
+            print(f"  {state}: already present, skipped")
+            continue
+        print(f"Pulling {meta['name']} consumption and weather ...")
+        fetch_state_consumption(state, api_key).to_csv(cons_f)
+        weighted_degree_days(meta["stations"]).to_csv(wx_f)
 
 
 def fetch_market_data(api_key: str | None = None) -> dict[str, pd.Series]:
@@ -144,16 +177,13 @@ def weighted_degree_days(stations: dict, start: str = config.START_DATE,
 def pull_all(api_key: str | None = None) -> None:
     config.RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Pulling MA consumption ...")
-    fetch_ma_consumption(api_key).to_csv(config.RAW_DIR / "ma_consumption.csv")
+    pull_states(api_key)
 
     print("Pulling market series ...")
     for name, s in fetch_market_data(api_key).items():
         s.rename("value").to_frame().rename_axis("period").to_csv(
             config.RAW_DIR / f"{name}.csv")
 
-    print("Pulling MA weather ...")
-    weighted_degree_days(config.MA_WEATHER_STATIONS).to_csv(config.RAW_DIR / "weather_ma.csv")
     print("Pulling US weather proxy ...")
     weighted_degree_days(config.US_WEATHER_STATIONS).to_csv(config.RAW_DIR / "weather_us.csv")
     print(f"Done. Raw files in {config.RAW_DIR}")
@@ -169,8 +199,20 @@ def load_raw() -> dict[str, pd.DataFrame | pd.Series]:
     }
     for name in config.MARKET_SERIES:
         out[name] = pd.read_csv(r / f"{name}.csv", index_col=0, parse_dates=True)["value"]
+    states = {}
+    for state in config.STATES:
+        cons_f, wx_f = state_files(state)
+        if cons_f.exists() and wx_f.exists():
+            states[state] = (pd.read_csv(cons_f, index_col=0, parse_dates=True),
+                             pd.read_csv(wx_f, index_col=0, parse_dates=True))
+    out["states"] = states
     return out
 
 
 if __name__ == "__main__":
-    pull_all()
+    import sys
+
+    if "--new-england" in sys.argv:   # add the other five states to an existing pull
+        pull_states(only_missing=True)
+    else:
+        pull_all()

@@ -80,3 +80,54 @@ def test_scenarios_are_ordered(raw):
     assert (winter["cold"] > winter["normal"]).all()
     assert (winter["warm"] < winter["normal"]).all()
 
+
+
+# ---------------------------------------------------------------- MA tariffs
+def test_rate_class_mapping():
+    from src.tariffs import classify, canonical_company
+    assert classify("Residential R-3, R-4") == ["Residential heating"]
+    assert classify("R-1, R-2") == ["Residential non-heating"]
+    assert set(classify("All Residential")) == {"Residential heating", "Residential non-heating"}
+    assert classify("G-41B/E, G-51B/E") == ["Small C&I"]
+    assert classify("G-41, 42, 43 & G-51, 52, 53") == ["Small C&I", "Medium C&I", "Large C&I"]
+    assert classify("Large C&I (G43/G53/T-1)") == ["Large C&I"]
+    assert classify("R-2, R-4") == []          # low-income only
+    assert canonical_company("KEYSPAN - BOSTON GAS") == "National Grid – Boston Gas"
+    assert canonical_company("NSTAR Gas d/b/a Eversource Energy") == "NSTAR Gas (Eversource)"
+    assert canonical_company("Eversource Gas Company of Massachusetts (formerly Bay State Gas "
+                             "d/b/a Columbia Gas of Massachusetts)").startswith("Eversource Gas of MA")
+
+
+def test_page_parser_and_monthly_asof(tmp_path):
+    from src import tariffs
+    html = """<h2>Peak/Winter 2025-2026 Rates (Effective 11/1/25 through 11/30/25)</h2>
+    <h3>National Grid - Boston Gas</h3>
+    <table><tr><th>Rate Class</th><th>Billing Unit</th><th>GAF</th><th>LDAF</th></tr>
+    <tr><th>All Residential</th><td>$/Therm</td><td>0.9564</td><td>0.5572</td></tr>
+    <tr><th>G-41B/E, G-51B/E</th><td>$/Therm</td><td>0.9564</td><td>(0.0100)</td></tr></table>
+    <h2>Peak/Winter 2025-2026 Rates Revision 3 (Effective 2/1/26 through 2/28/26)</h2>
+    <h3>National Grid - Boston Gas</h3>
+    <table><tr><th>Rate Class</th><th>Billing Unit</th><th>GAF</th><th>LDAF</th></tr>
+    <tr><th>All Residential</th><td>$/Therm</td><td>1.2329</td><td>0.5572</td></tr></table>"""
+    f = tmp_path / "page.html"
+    f.write_text(html)
+    t = tariffs.build_rate_table(None, f)
+    assert len(t) == 3 and t["ldaf"].min() == -0.01          # parentheses = credit
+    m = tariffs.monthly_factors(t)
+    r = m[m["category"] == "Residential heating"].set_index("month")["gaf_therm"]
+    assert r.loc["2025-12-01"] == 0.9564 and r.loc["2026-01-01"] == 0.9564   # carried forward
+    assert r.loc["2026-02-01"] == 1.2329
+
+
+def test_ccf_rates_converted_to_therms():
+    from src.tariffs import _to_therm, THERMS_PER_CCF
+    assert _to_therm(1.037, "$/Ccf") == 1.037 / THERMS_PER_CCF
+    assert np.isnan(_to_therm(3.2, "$/MDCQ"))
+
+
+def test_region_forecasts_every_state(raw):
+    from src import region
+    assert len(raw["states"]) == 6
+    sc, fc, hist = region.run_region({k: raw["states"][k] for k in ("VT", "RI")}, step=12,
+                                     verbose=False)
+    assert set(fc["state"]) == {"VT", "RI"} and fc.groupby("state").size().eq(12).all()

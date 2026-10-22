@@ -11,7 +11,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from . import config, data, features
+from . import config, data, features, region, tariffs
 from . import demand_backtest as dbt
 from . import demand_models as dm
 from . import price_models as pm
@@ -55,6 +55,26 @@ def run(pull: bool = False, quick: bool = False) -> dict:
     wn.to_csv(out / "demand_weather_normalized.csv")
     normals = features.monthly_hdd_normals(dfd["hdd"])
     normals.to_csv(out / "hdd_normals.csv")
+
+    # ---------------- New England states ----------------
+    if len(raw.get("states", {})) > 1:
+        print("\n[New England] state forecasts")
+        rs, rf, rh = region.run_region(raw["states"], ma_result=(dfd, scores, fc), step=step)
+        rs.to_csv(out / "region_scores.csv", index=False)
+        rf.to_csv(out / "region_forecasts.csv", index=False)
+        rh.to_csv(out / "region_history.csv", index=False)
+        best = rs[rs["model"] != "Seasonal naive"].sort_values("MAPE %").groupby("state").first()
+        print(best[["model", "MAPE %", "Skill vs naive %"]].round(2).to_string())
+
+    # ---------------- MA GAF / LDAF ----------------
+    wb, page = config.RAW_DIR / tariffs.WORKBOOK_FILE, config.RAW_DIR / tariffs.PAGE_FILE
+    if pull or not (wb.exists() or page.exists()):
+        print("\n[MA tariffs] downloading DPU GAF/LDAF files")
+        tariffs.download()
+    if wb.exists() or page.exists():
+        print("[MA tariffs] building GAF/LDAF tables")
+        tariffs.run(fetch=False)
+        tariffs.henry_hub_per_therm(raw["henry_hub"]).to_csv(out / "henry_hub_monthly_therm.csv")
 
     # ---------------- Price ----------------
     print("\n[Price] building features")

@@ -16,15 +16,40 @@ PROCESSED_DIR = DATA_DIR / "processed"
 
 START_DATE = "2001-01-01"
 
-# --- EIA series -----------------------------------------------------------
-# Massachusetts natural gas deliveries by end use, monthly, MMcf.
-MA_CONSUMPTION_SERIES = {
-    "total": "NG.N3060MA2.M",        # volumes delivered to consumers
-    "residential": "NG.N3010MA2.M",
-    "commercial": "NG.N3020MA2.M",
-    "industrial": "NG.N3035MA2.M",
-    "electric_power": "NG.N3045MA2.M",
+# --- New England states ----------------------------------------------------
+# EIA monthly deliveries by end use (MMcf), series N30xx<ST>2, and weather
+# stations weighted roughly toward where each state's gas load sits.
+_SECTORS = {"total": "N3060", "residential": "N3010", "commercial": "N3020",
+            "industrial": "N3035", "electric_power": "N3045"}
+
+
+def consumption_series(state: str) -> dict[str, str]:
+    return {k: f"NG.{code}{state}2.M" for k, code in _SECTORS.items()}
+
+
+STATES = {
+    "MA": {"name": "Massachusetts", "stations": {
+        "boston": {"lat": 42.36, "lon": -71.06, "weight": 0.70},
+        "worcester": {"lat": 42.27, "lon": -71.80, "weight": 0.18},
+        "springfield": {"lat": 42.10, "lon": -72.59, "weight": 0.12}}},
+    "CT": {"name": "Connecticut", "stations": {
+        "hartford": {"lat": 41.76, "lon": -72.68, "weight": 0.55},
+        "new_haven": {"lat": 41.31, "lon": -72.92, "weight": 0.45}}},
+    "RI": {"name": "Rhode Island", "stations": {
+        "providence": {"lat": 41.82, "lon": -71.41, "weight": 1.0}}},
+    "NH": {"name": "New Hampshire", "stations": {
+        "manchester": {"lat": 42.99, "lon": -71.46, "weight": 0.6},
+        "portsmouth": {"lat": 43.07, "lon": -70.76, "weight": 0.4}}},
+    "ME": {"name": "Maine", "stations": {
+        "portland_me": {"lat": 43.66, "lon": -70.26, "weight": 0.6},
+        "bangor": {"lat": 44.80, "lon": -68.77, "weight": 0.4}}},
+    "VT": {"name": "Vermont", "stations": {
+        "burlington": {"lat": 44.48, "lon": -73.21, "weight": 1.0}}},
 }
+
+# Backward-compatible names for Massachusetts
+MA_CONSUMPTION_SERIES = consumption_series("MA")
+MA_WEATHER_STATIONS = STATES["MA"]["stations"]
 
 # National market drivers for the Henry Hub model.
 MARKET_SERIES = {
@@ -35,14 +60,6 @@ MARKET_SERIES = {
 }
 
 # --- Weather --------------------------------------------------------------
-# Massachusetts demand weather: three stations weighted roughly by the
-# population each one represents (eastern MA dominates gas load).
-MA_WEATHER_STATIONS = {
-    "boston": {"lat": 42.36, "lon": -71.06, "weight": 0.70},
-    "worcester": {"lat": 42.27, "lon": -71.80, "weight": 0.18},
-    "springfield": {"lat": 42.10, "lon": -72.59, "weight": 0.12},
-}
-
 # National weather proxy for Henry Hub: large heating/cooling load centers.
 US_WEATHER_STATIONS = {
     "new_york": {"lat": 40.71, "lon": -74.01, "weight": 0.25},

@@ -1,6 +1,6 @@
 # New England Natural Gas: Demand & Price Forecasting
 
-Forecasts **Massachusetts monthly natural gas demand** 1–12 months ahead under normal, cold and warm weather, and the **Henry Hub spot price** 1 and 4 weeks ahead, using only public data. Built to the standards a utility or energy-trading team would expect: weather normalization, rolling-origin backtests, honest benchmarks, and explicit controls for look-ahead leakage.
+Forecasts **New England utility gas demand by state and company**, breaks down **Massachusetts gas prices per therm into GAF and LDAF** for every utility since 2008, and forecasts **Massachusetts monthly natural gas demand** 1–12 months ahead under normal, cold and warm weather, and the **Henry Hub spot price** 1 and 4 weeks ahead, using only public data. Built to the standards a utility or energy-trading team would expect: weather normalization, rolling-origin backtests, honest benchmarks, and explicit controls for look-ahead leakage.
 
 **Live app:** _add your Streamlit link here_ · **Author:** Cathy Kam
 
@@ -65,6 +65,15 @@ Random walk (benchmark) · Ridge on momentum · Ridge on fundamentals · Ridge o
 
 Walk-forward evaluation with quarterly refits. Every challenger is compared to the random walk with a **Diebold–Mariano test** (Newey–West variance, Harvey–Leybourne–Newbold correction), so a small edge isn't mistaken for skill. LightGBM's native **TreeSHAP** shows which drivers move the forecast.
 
+### New England by state and company
+The Massachusetts method (utility-load target, 15-year normals, rolling-origin backtest) runs for Connecticut, Rhode Island, New Hampshire, Maine and Vermont, each with its own weather stations; each state keeps whichever model backtests best. Company forecasts split each state's monthly forecast by the company's share of utility deliveries in EIA Form 176 (annual company reports; latest three years), and company retail prices per therm come from Form 176 revenue ÷ volume.
+
+### Massachusetts price per therm: GAF and LDAF
+- **GAF** (Gas Adjustment Factor) recovers gas supply, interstate transportation and storage costs dollar-for-dollar; set per peak/off-peak season with mid-season revisions.
+- **LDAF** (Local Distribution Adjustment Factor) recovers distribution program costs (energy efficiency from 2025/26, GSEP pipe replacement, environmental response, residential assistance and others).
+
+`src/tariffs.py` parses the DPU's current-rates page and historical workbook (6,700+ filed rates, 170 revisions, May 2008 onward) into monthly $/therm factors for each company and rate category (residential heating/non-heating, small/medium/large C&I), maps predecessor names (Bay State/Columbia → Eversource Gas of MA; KeySpan → National Grid; New England Gas → Liberty), converts $/Ccf rates to $/therm, and compares GAF with the Henry Hub price. Base distribution rates and customer charges are set in rate cases and are not included.
+
 ### Leakage controls (unit-tested in `tests/`)
 - Storage enters with a one-week lag (the report for week *t* is released the following Thursday).
 - LNG exports are used only after a two-month publication delay.
@@ -82,13 +91,16 @@ Walk-forward evaluation with quarterly refits. Every challenger is compared to t
 │   ├── demand_models.py        six demand models, common interface
 │   ├── demand_backtest.py      rolling-origin backtest, scenarios, weather normalization
 │   ├── price_models.py         price models, walk-forward, Diebold–Mariano
+│   ├── region.py               New England state forecasts and company split
+│   ├── tariffs.py              MA GAF/LDAF parser (DPU page + workbook)
 │   ├── pipeline.py             end-to-end run → data/processed/
 │   └── plotting.py             shared chart style
 ├── notebooks/
 │   ├── 01_data_acquisition.ipynb
 │   ├── 02_eda.ipynb
 │   ├── 03_demand_forecasting.ipynb
-│   └── 04_price_forecasting.ipynb
+│   ├── 04_price_forecasting.ipynb
+│   └── 05_ma_price_per_therm.ipynb
 ├── tests/                      leakage and sanity tests (synthetic fixture)
 └── .github/workflows/refresh.yml   weekly automated refresh
 ```
@@ -100,7 +112,7 @@ python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\act
 pip install -r requirements-pipeline.txt
 
 export EIA_API_KEY=your_key        # free: https://www.eia.gov/opendata/register.php
-python -m src.pipeline --pull      # pulls data, runs backtests (~5-10 min), writes data/processed/
+python -m src.pipeline --pull      # pulls EIA, weather and DPU data, runs everything (~15-25 min)
 pytest -q tests/                   # leakage tests
 streamlit run app.py
 ```

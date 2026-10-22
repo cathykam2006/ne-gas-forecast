@@ -72,6 +72,19 @@ def main(root: Path):
     ramp = np.clip((mm.year + mm.month / 12 - 2016) / 8, 0, 1)
     lng = 3000 + 450000 * ramp + rng.normal(0, 8000, len(mm)).clip(-2000)
     pd.DataFrame({"value": np.abs(lng)}, index=pd.Index(mm, name="period")).to_csv(raw / "lng_exports.csv")
+    # Other New England states: scaled copies with their own weather noise
+    for st, scale in (("ct", 0.55), ("ri", 0.2), ("nh", 0.15), ("me", 0.08), ("vt", 0.05)):
+        w = weather(amp=23, mean=48)
+        w.to_csv(raw / f"weather_{st}.csv")
+        mm_ = w[["hdd", "cdd"]].resample("MS").sum().loc[:"2026-07-01"]
+        d_ = mm_.index.days_in_month.values
+        sc = pd.DataFrame({
+            "residential": scale * (90 * d_ + 22 * mm_["hdd"].values) + rng.normal(0, 300 * scale, len(mm_)),
+            "commercial": scale * (60 * d_ + 13 * mm_["hdd"].values) + rng.normal(0, 200 * scale, len(mm_)),
+            "industrial": scale * 140 * d_ + rng.normal(0, 100 * scale, len(mm_)),
+        }, index=pd.Index(mm_.index, name="month"))
+        sc.insert(0, "total", sc.sum(axis=1))
+        sc.to_csv(raw / f"{st}_consumption.csv")
     print(f"Synthetic fixture written to {raw}")
 
 
