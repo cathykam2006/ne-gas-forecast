@@ -18,9 +18,9 @@ from . import config
 
 warnings.filterwarnings("ignore")
 logging.getLogger("cmdstanpy").disabled = True
+logging.getLogger("prophet").disabled = True
 logging.getLogger("prophet").setLevel(logging.WARNING)
 
-CAL = ["sin1", "cos1", "sin2", "cos2"]
 
 
 class SeasonalNaive:
@@ -36,21 +36,31 @@ class SeasonalNaive:
 
 
 class HDDRegression:
-    """Utility-style weather regression:
-    y = a*days + b*HDD + c*CDD + d*trend*days + seasonal terms.
+    """Utility-style weather regression on the most recent 10 years:
 
-    `b` is the weather sensitivity (MMcf per heating degree day).
+        y = days * (base + seasonal terms) + b * HDD + c * CDD
+
+    `b` is the weather sensitivity (MMcf per heating degree day). Seasonal
+    terms scale with days in the month and capture non-weather patterns
+    (e.g. slower response in shoulder months). The 10-year window lets the
+    heating slope and base load follow structural change such as customer
+    growth, efficiency and EIA reclassifications between sectors, which a
+    single all-history fit cannot (backtested in notebook 03).
     """
     name = "HDD regression"
-    cols = ["days", "hdd", "cdd", "t_days"] + CAL
+    window_years = 10
+    cols = ["days", "hdd", "cdd", "s1", "c1", "s2", "c2"]
 
     def _X(self, df):
-        X = df.copy()
-        X["t_days"] = X["t"] * X["days"]
+        X = df[["days", "hdd", "cdd"]].copy()
+        for k in (1, 2):
+            X[f"s{k}"] = df[f"sin{k}"] * df["days"]
+            X[f"c{k}"] = df[f"cos{k}"] * df["days"]
         return X[self.cols]
 
     def fit(self, train):
-        self.res = sm.OLS(train["y"], self._X(train)).fit()
+        tr = train[train.index > train.index[-1] - pd.DateOffset(years=self.window_years)]
+        self.res = sm.OLS(tr["y"], self._X(tr)).fit()
         return self
 
     def predict(self, future):
@@ -78,11 +88,16 @@ class SARIMAXModel:
 
 
 class ProphetModel:
-    """Prophet with yearly seasonality and HDD/CDD regressors."""
+    """Prophet with yearly seasonality and HDD/CDD regressors, fit on the
+    most recent 10 years (on full history its trend extrapolation overshoots
+    badly; see notebook 03)."""
     name = "Prophet"
+    window_years = 10
 
     def fit(self, train):
         from prophet import Prophet
+
+        train = train[train.index > train.index[-1] - pd.DateOffset(years=self.window_years)]
 
         self.m = Prophet(yearly_seasonality=True, weekly_seasonality=False,
                          daily_seasonality=False, seasonality_mode="additive")

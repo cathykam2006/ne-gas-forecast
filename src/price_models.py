@@ -15,7 +15,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from . import config
-from .features import PRICE_FEATURES, risk_features_in
+from .features import PRICE_FEATURES
 
 FUNDAMENTALS = ["storage_surplus_pct", "injection_vs_norm_bcf", "dd_anom",
                 "dd_anom_4", "lng_yoy_pct", "lng_bcfd", "sin_w", "cos_w"]
@@ -70,11 +70,7 @@ class LGBMPrice:
         return pd.DataFrame(c[:, :-1], columns=self.cols, index=X.index)
 
 
-RISK_RIDGE = "Ridge (all + geopolitical/trade risk)"
-RISK_LGBM = "LightGBM (all + geopolitical/trade risk)"
-
-
-def model_zoo(risk_cols: list[str] | None = None):
+def model_zoo():
     zoo = [
         RandomWalk(),
         RidgeModel(MOMENTUM, "Ridge (momentum only)"),
@@ -82,15 +78,12 @@ def model_zoo(risk_cols: list[str] | None = None):
         RidgeModel(PRICE_FEATURES, "Ridge (all features)"),
         LGBMPrice(),
     ]
-    if risk_cols:
-        zoo += [RidgeModel(PRICE_FEATURES + risk_cols, RISK_RIDGE),
-                LGBMPrice(PRICE_FEATURES + risk_cols, RISK_LGBM)]
     return zoo
 
 
 def walk_forward(df: pd.DataFrame, h: int = 1, first_test: str = "2015-01-01",
                  refit_every: int = 13, min_train: int = 260,
-                 models_fn=model_zoo, use_risk: bool = True) -> pd.DataFrame:
+                 models_fn=model_zoo) -> pd.DataFrame:
     """Expanding-window walk-forward test.
 
     At each refit date the models are trained only on rows whose target is
@@ -98,9 +91,8 @@ def walk_forward(df: pd.DataFrame, h: int = 1, first_test: str = "2015-01-01",
     `refit_every` weeks out-of-sample.
     """
     target = f"y_h{h}"
-    risk_cols = risk_features_in(df) if use_risk else []
     # Every model is scored on exactly the same weeks, so comparisons are fair.
-    data = df.dropna(subset=PRICE_FEATURES + risk_cols + ["log_p"]).copy()
+    data = df.dropna(subset=PRICE_FEATURES + ["log_p"]).copy()
     test_idx = data.index[data.index >= pd.Timestamp(first_test)]
     test_idx = test_idx[data.loc[test_idx, target].notna()]
     rows = []
@@ -111,7 +103,7 @@ def walk_forward(df: pd.DataFrame, h: int = 1, first_test: str = "2015-01-01",
         train = data[data.index < cutoff].dropna(subset=[target]).iloc[:-h or None]
         if len(train) < min_train:
             continue
-        for m in models_fn(risk_cols):
+        for m in models_fn():
             m.fit(train, train[target])
             pred = m.predict(data.loc[block])
             for d, p in zip(block, pred):
@@ -168,8 +160,8 @@ def score_price(wf: pd.DataFrame, h: int = 1) -> pd.DataFrame:
 def compare_models(wf: pd.DataFrame, challenger: str, base: str, h: int) -> dict:
     """Diebold-Mariano test of one model against another (not the random walk).
 
-    Used for the ablation question: does adding geopolitical/trade-risk
-    features improve on the same model without them?
+    Useful for ablations: does adding a feature block improve on the same
+    model without it?
     """
     a = wf[wf["model"] == challenger].set_index("date")
     b = wf[wf["model"] == base].set_index("date").loc[a.index]

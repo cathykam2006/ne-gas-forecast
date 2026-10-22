@@ -5,12 +5,14 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from . import config
 from .demand_models import ALL_MODELS
 
 WINTER = [11, 12, 1, 2, 3]
 
 
-def _normals_from(train: pd.DataFrame, years: int = 30) -> pd.DataFrame:
+def _normals_from(train: pd.DataFrame, years: int | None = None) -> pd.DataFrame:
+    years = years or config.NORMAL_YEARS
     recent = train[train.index >= train.index[-1] - pd.DateOffset(years=years)]
     g = recent.groupby(recent.index.month)
     return pd.DataFrame({
@@ -22,7 +24,7 @@ def _normals_from(train: pd.DataFrame, years: int = 30) -> pd.DataFrame:
 
 def future_frame(history: pd.DataFrame, months: pd.DatetimeIndex,
                  weather: pd.DataFrame | None = None,
-                 scenario: str = "normal") -> pd.DataFrame:
+                 scenario: str = "normal", normal_years: int | None = None) -> pd.DataFrame:
     """Exogenous rows for `months`, using `history` for lags and the trend.
 
     scenario: "actual" (use weather in `weather`), "normal", "cold" or "warm".
@@ -40,7 +42,7 @@ def future_frame(history: pd.DataFrame, months: pd.DatetimeIndex,
     if scenario == "actual":
         f[["hdd", "cdd"]] = weather.loc[months, ["hdd", "cdd"]].values
     else:
-        n = _normals_from(history)
+        n = _normals_from(history, normal_years)
         suffix = {"normal": "", "cold": "_p90", "warm": "_p10"}[scenario]
         f["hdd"] = f["month"].map(n[f"hdd{suffix}"])
         f["cdd"] = f["month"].map(n["cdd"])  # scenarios vary heating weather only
@@ -50,23 +52,29 @@ def future_frame(history: pd.DataFrame, months: pd.DatetimeIndex,
 
 def rolling_backtest(df: pd.DataFrame, models=ALL_MODELS, first_origin: str = "2015-12-01",
                      step: int = 3, horizon: int = 12, weather: str = "normal",
-                     verbose: bool = True) -> pd.DataFrame:
+                     verbose: bool = True, normal_years: int | None = None,
+                     train_years: int | None | str = "config") -> pd.DataFrame:
     """Expanding-window backtest.
 
-    weather="normal": future HDD/CDD are the 30-year normals known at the
-        origin (an honest ex-ante forecast).
+    weather="normal": future HDD/CDD are the weather normals known at the
+        origin (an honest ex-ante forecast). `normal_years` sets the window.
     weather="actual": future HDD/CDD are what actually happened, isolating
         model skill from weather-forecast error (ex-post, as in weather
         normalization studies).
+    train_years: fit on only the most recent N years (None = all history).
     """
+    if train_years == "config":
+        train_years = config.TRAIN_YEARS
     origins = df.index[(df.index >= pd.Timestamp(first_origin))][:-1][::step]
     rows = []
     for i, origin in enumerate(origins):
-        train = df.loc[:origin]
+        hist = df.loc[:origin]
+        train = _window(hist, train_years)
         months = df.index[(df.index > origin)][:horizon]
         if len(months) == 0:
             continue
-        fut = future_frame(train, months, weather=df, scenario=weather)
+        fut = future_frame(hist, months, weather=df, scenario=weather,
+                           normal_years=normal_years)
         actual = df.loc[months, "y"].values
         for M in models:
             try:
@@ -84,6 +92,12 @@ def rolling_backtest(df: pd.DataFrame, models=ALL_MODELS, first_origin: str = "2
     out["err"] = out["yhat"] - out["y"]
     out["ape"] = (out["err"].abs() / out["y"]) * 100
     return out
+
+
+def _window(df: pd.DataFrame, years: int | None) -> pd.DataFrame:
+    if not years:
+        return df
+    return df[df.index > df.index[-1] - pd.DateOffset(years=years)]
 
 
 def score(bt: pd.DataFrame) -> pd.DataFrame:
@@ -124,7 +138,7 @@ def scenario_forecast(df: pd.DataFrame, model_cls, horizon: int = 12,
     cold (P90 HDD) and warm (P10 HDD) weather, with backtest-based
     90% intervals around the normal-weather path."""
     months = pd.date_range(df.index[-1] + pd.offsets.MonthBegin(1), periods=horizon, freq="MS")
-    model = model_cls().fit(df)
+    model = model_cls().fit(_window(df, config.TRAIN_YEARS))
     out = pd.DataFrame(index=months)
     for sc in ("normal", "cold", "warm"):
         fut = future_frame(df, months, scenario=sc)

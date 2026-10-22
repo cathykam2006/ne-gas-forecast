@@ -34,17 +34,19 @@ Key findings: weather sensitivity of ~… MMcf per HDD; a cold (P90) winter adds
 | Working gas in storage, Lower 48 / East (Bcf) | EIA Weekly Natural Gas Storage Report | Weekly |
 | U.S. LNG exports (MMcf) | EIA API v2 (`N9133US2`) | Monthly |
 | Daily max/min temperature | Open-Meteo ERA5 archive (no key) | Daily |
-| Geopolitical Risk index (war, military threats, terrorism) | Caldara & Iacoviello | Daily |
-| Economic policy uncertainty; trade-policy (tariff) uncertainty | Baker, Bloom & Davis via FRED | Daily; monthly |
-| Brent crude; European natural gas price | FRED (EIA, IMF) | Daily; monthly |
 
 Massachusetts heating degree days weight Boston (70%), Worcester (18%) and Springfield (12%). The price model uses a five-city national weather proxy.
+
+### Demand target and design choices (tested on the data)
+- **Target = utility (LDC) load: residential + commercial + industrial.** Power plants burn about a third of Massachusetts gas, but that use follows electricity markets and runs *opposite* to heating weather (correlation with HDD of −0.5, vs. +0.96 for LDC load). Including it made every weather model worse.
+- **15-year weather normals, not 30.** Massachusetts averaged ~12% fewer heating degree days in the 2020s than in the 2000s, so 30-year normals bias forecasts upward. 15-year normals backtested best.
+- **10-year window for the regression models.** EIA sector data have structural breaks (e.g. a large shift into the commercial category around 2013), and fitting all history at once made the HDD regression over-forecast summers by 20–30%.
 
 ### Demand models
 Seasonal naive (benchmark) · **HDD regression** (utility standard, interpretable) · **SARIMAX** with HDD/CDD · **Prophet** with HDD/CDD regressors · **LightGBM** · **Hybrid**: HDD regression + LightGBM on its residuals.
 
 Evaluated with an expanding-window rolling-origin backtest (origins every quarter since Dec 2015, 12-month horizon), run twice:
-- **Normal weather (ex-ante):** future HDD set to 30-year normals known at the origin, i.e. a real forecast.
+- **Normal weather (ex-ante):** future HDD set to 15-year normals known at the origin, i.e. a real forecast.
 - **Actual weather (ex-post):** future HDD set to what happened, isolating model skill from weather uncertainty.
 
 Forecasts are produced for **normal, cold (P90 HDD) and warm (P10 HDD)** winters, with 90% intervals from each model's own backtest errors by horizon. Demand history is also **weather-normalized** to separate warm winters from structural change such as efficiency and electrification.
@@ -55,14 +57,9 @@ Random walk (benchmark) · Ridge on momentum · Ridge on fundamentals · Ridge o
 
 Walk-forward evaluation with quarterly refits. Every challenger is compared to the random walk with a **Diebold–Mariano test** (Newey–West variance, Harvey–Leybourne–Newbold correction), so a small edge isn't mistaken for skill. LightGBM's native **TreeSHAP** shows which drivers move the forecast.
 
-### Geopolitical and trade-policy risk
-Wars, sanctions and tariffs arrive as surprises, so the question is whether risk *already visible* at forecast time helps. The price model adds a risk block: the Geopolitical Risk index, policy and trade-policy uncertainty, Brent momentum, and the Europe–US gas price spread (the channel through which the Russia–Ukraine war reached Henry Hub via LNG exports). An **ablation test** compares each model with and without the block using Diebold–Mariano. Charts mark COVID-19, Winter Storm Uri, the Russian invasion of Ukraine, the Freeport LNG outage and China's 2025 tariff on US LNG.
-
-Geopolitics barely moves *heating* demand, so the demand model stays weather-driven.
-
 ### Leakage controls (unit-tested in `tests/`)
 - Storage enters with a one-week lag (the report for week *t* is released the following Thursday).
-- LNG exports are used only after a two-month publication delay; the European gas price after two months; trade-policy uncertainty after one; the risk indices after one week.
+- LNG exports are used only after a two-month publication delay.
 - Seasonal "normals" use prior years only.
 - Models train only on targets already realized at each refit date; the backtest never sees the future.
 

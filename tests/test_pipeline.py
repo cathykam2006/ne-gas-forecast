@@ -80,31 +80,3 @@ def test_scenarios_are_ordered(raw):
     assert (winter["cold"] > winter["normal"]).all()
     assert (winter["warm"] < winter["normal"]).all()
 
-
-def test_risk_features_respect_publication_lags(raw):
-    from src import features
-    df = features.build_price_frame(raw["henry_hub"], raw["storage_l48"], raw["lng_exports"],
-                                    raw["weather_us"], risk=raw["risk"])
-    assert set(features.risk_features_in(df)) == set(features.RISK_FEATURES_ALL)
-    # EU-Henry Hub spread for Dec 2019 can't be used before March 2020
-    d_before, d_after = pd.Timestamp("2020-02-28"), pd.Timestamp("2020-03-06")
-    hh = raw["henry_hub"].resample("MS").mean()
-    eu = raw["risk"]["eu_gas"]
-    dec = eu.loc["2019-12-01"] - hh.loc["2019-12-01"]
-    assert np.isclose(df.at[d_after, "eu_hh_spread"], dec)
-    assert not np.isclose(df.at[d_before, "eu_hh_spread"], dec)
-    # Geopolitical risk index is lagged one week
-    g = np.log(raw["risk"]["gpr"].resample("W-FRI").mean()).rolling(4, min_periods=2).mean()
-    d = df.index[700]
-    assert np.isclose(df.at[d, "gpr_4w"], g.loc[d - pd.Timedelta(weeks=1)])
-
-
-def test_price_models_run_with_and_without_risk(raw):
-    from src import features, price_models as pm
-    df = features.build_price_frame(raw["henry_hub"], raw["storage_l48"], raw["lng_exports"],
-                                    raw["weather_us"], risk=raw["risk"])
-    wf = pm.walk_forward(df, h=1, first_test="2024-01-01", refit_every=52)
-    assert {pm.RISK_RIDGE, pm.RISK_LGBM} <= set(wf["model"])
-    assert wf.groupby("model").size().nunique() == 1  # same weeks for every model
-    wf0 = pm.walk_forward(df, h=1, first_test="2024-01-01", refit_every=52, use_risk=False)
-    assert pm.RISK_RIDGE not in set(wf0["model"])

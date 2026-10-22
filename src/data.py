@@ -139,77 +139,6 @@ def weighted_degree_days(stations: dict, start: str = config.START_DATE,
 
 
 # --------------------------------------------------------------------------
-# Geopolitical, trade-policy and global-market risk
-# --------------------------------------------------------------------------
-FRED_CSV = "https://fred.stlouisfed.org/graph/fredgraph.csv"
-
-
-def fetch_fred(series_id: str, start: str = config.START_DATE) -> pd.Series:
-    """Download a FRED series as CSV (no API key needed)."""
-    from io import StringIO
-
-    resp = requests.get(FRED_CSV, params={"id": series_id, "cosd": start}, timeout=60)
-    resp.raise_for_status()
-    df = pd.read_csv(StringIO(resp.text))
-    date_col, val_col = df.columns[0], df.columns[-1]
-    s = pd.Series(pd.to_numeric(df[val_col], errors="coerce").values,
-                  index=pd.to_datetime(df[date_col]), name=series_id)
-    return s.dropna().sort_index()
-
-
-def _parse_gpr(df: pd.DataFrame) -> pd.Series:
-    cols = {c.lower(): c for c in df.columns}
-    if "date" in cols:
-        idx = pd.to_datetime(df[cols["date"]], errors="coerce")
-    else:  # DAY stored as yyyymmdd
-        idx = pd.to_datetime(df[cols["day"]].astype(str), format="%Y%m%d", errors="coerce")
-    val = df[cols.get("gprd", "GPRD")]
-    s = pd.Series(pd.to_numeric(val, errors="coerce").values, index=idx, name="gpr")
-    return s[s.index.notna()].dropna().sort_index()
-
-
-def fetch_gpr_daily() -> pd.Series:
-    """Daily Geopolitical Risk index (Caldara & Iacoviello).
-
-    Tries the published file; if the site layout changes, download the daily
-    .xls from https://www.matteoiacoviello.com/gpr.htm into
-    data/raw/gpr_daily.xls and rerun.
-    """
-    from io import BytesIO
-
-    for url in config.GPR_DAILY_URLS:
-        try:
-            r = requests.get(url, timeout=60)
-            if r.status_code == 200 and len(r.content) > 10_000:
-                return _parse_gpr(pd.read_excel(BytesIO(r.content)))
-        except Exception:
-            continue
-    manual = config.RAW_DIR / config.GPR_MANUAL_FILE
-    if manual.exists():
-        return _parse_gpr(pd.read_excel(manual))
-    raise RuntimeError("Could not download the GPR index. Download the daily file from "
-                       "https://www.matteoiacoviello.com/gpr.htm and save it as "
-                       f"{manual}")
-
-
-def pull_risk() -> None:
-    """Pull every risk series; a failure skips that series instead of stopping."""
-    for name, sid in config.FRED_SERIES.items():
-        try:
-            fetch_fred(sid).rename("value").to_frame().rename_axis("period").to_csv(
-                config.RAW_DIR / f"risk_{name}.csv")
-            print(f"  {name} ok")
-        except Exception as e:
-            print(f"  {name} ({sid}) skipped: {e}")
-    try:
-        fetch_gpr_daily().rename("value").to_frame().rename_axis("period").to_csv(
-            config.RAW_DIR / "risk_gpr.csv")
-        print("  gpr ok")
-    except Exception as e:
-        print(f"  gpr skipped: {e}")
-
-
-# --------------------------------------------------------------------------
 # Orchestration
 # --------------------------------------------------------------------------
 def pull_all(api_key: str | None = None) -> None:
@@ -227,8 +156,6 @@ def pull_all(api_key: str | None = None) -> None:
     weighted_degree_days(config.MA_WEATHER_STATIONS).to_csv(config.RAW_DIR / "weather_ma.csv")
     print("Pulling US weather proxy ...")
     weighted_degree_days(config.US_WEATHER_STATIONS).to_csv(config.RAW_DIR / "weather_us.csv")
-    print("Pulling geopolitical / trade-policy / global-market series ...")
-    pull_risk()
     print(f"Done. Raw files in {config.RAW_DIR}")
 
 
@@ -242,20 +169,8 @@ def load_raw() -> dict[str, pd.DataFrame | pd.Series]:
     }
     for name in config.MARKET_SERIES:
         out[name] = pd.read_csv(r / f"{name}.csv", index_col=0, parse_dates=True)["value"]
-    risk = {}
-    for name in list(config.FRED_SERIES) + ["gpr"]:
-        f = r / f"risk_{name}.csv"
-        if f.exists():
-            risk[name] = pd.read_csv(f, index_col=0, parse_dates=True)["value"]
-    out["risk"] = risk
     return out
 
 
 if __name__ == "__main__":
-    import sys
-
-    if "--risk-only" in sys.argv:
-        config.RAW_DIR.mkdir(parents=True, exist_ok=True)
-        pull_risk()
-    else:
-        pull_all()
+    pull_all()

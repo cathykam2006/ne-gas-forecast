@@ -41,8 +41,6 @@ def load():
         "wf1": r("price_wf_h1.csv", parse_dates=["date"]),
         "latest": r("price_latest_forecasts.csv", parse_dates=["as_of"]),
         "shap": r("price_shap_h4.csv", index_col=0, parse_dates=True),
-        "ablation": (r("price_risk_ablation.csv") if (P / "price_risk_ablation.csv").exists()
-                     else None),
     }
 
 
@@ -60,7 +58,7 @@ def style(fig, title, ytitle, height=400):
 
 
 def add_events(fig, start):
-    """Dotted markers for geopolitical and market events (context only)."""
+    """Dotted markers for major market events (context only, not model inputs)."""
     for d, label in config.EVENTS:
         d = pd.Timestamp(d)
         if d >= start:
@@ -111,10 +109,10 @@ with tab_d:
         fig.add_trace(go.Scatter(x=fc.index, y=fc[s_] / 1000, name=f"{s_.title()} weather",
                                  line=dict(color=SCENARIO_COLORS[s_], width=2.5 if s_ == "normal" else 1.8,
                                            dash=dash)))
-    st.plotly_chart(style(fig, f"12-month forecast · {best}", "Bcf per month"),
+    st.plotly_chart(style(fig, f"Massachusetts utility gas demand, 12-month forecast · {best}", "Bcf per month"),
                     width="stretch")
     st.caption(f"Data through {m['demand_data_through']}. Cold/warm = 90th/10th percentile "
-               "monthly HDD over the last 30 years. Interval from backtest errors at each horizon.")
+               "monthly HDD over the last 15 years. Interval from backtest errors at each horizon.")
 
     a, b = st.columns(2)
     with a:
@@ -202,44 +200,6 @@ with tab_p:
         st.plotly_chart(fig, width="stretch")
 
     dfp = D["dfp"]
-    st.subheader("Geopolitical and trade-policy risk")
-    ab = D["ablation"]
-    if ab is not None:
-        r_ = ab[ab["h"] == h].copy()
-        for _, row in r_.iterrows():
-            better = row["RMSE change %"] < 0
-            sig = row["DM p-value"] < 0.05
-            msg = (f"**{row['challenger']}** vs. the same model without risk features, "
-                   f"{h}-week horizon: RMSE {row['RMSE change %']:+.1f}% "
-                   f"(DM p = {row['DM p-value']:.2f}). ")
-            msg += ("Risk features significantly improve the forecast." if better and sig else
-                    "Small improvement, not statistically significant." if better else
-                    "Risk features make it significantly worse (overfitting)." if sig else
-                    "Risk features do not improve the forecast.")
-            st.markdown("- " + msg)
-        st.caption("War, sanctions and tariffs are mostly unpredictable shocks. These features test "
-                   "whether measured risk levels (news-based indices, global prices) carry "
-                   "forecastable information once the shock has started.")
-    rc = [c for c in ("gpr_4w", "epu_4w") if c in dfp]
-    if rc:
-        recent = dfp[rc].dropna().iloc[-520:]
-        names = {"gpr_4w": "Geopolitical risk (Caldara-Iacoviello)",
-                 "epu_4w": "Economic policy uncertainty (Baker-Bloom-Davis)"}
-        fig = go.Figure()
-        for i, c in enumerate(rc):
-            fig.add_trace(go.Scatter(x=recent.index, y=np.exp(recent[c]), name=names[c],
-                                     line=dict(color=SERIES[[6, 1][i]], width=1.8)))
-        add_events(fig, recent.index.min())
-        st.plotly_chart(style(fig, "Risk indices, 4-week average (100 ≈ long-run average)", "Index"),
-                        width="stretch")
-    if "eu_hh_spread" in dfp:
-        sp = dfp["eu_hh_spread"].dropna()
-        fig = go.Figure(go.Scatter(x=sp.index, y=sp, name="Europe minus Henry Hub",
-                                   line=dict(color=SERIES[0], width=1.8)))
-        add_events(fig, sp.index.min())
-        st.plotly_chart(style(fig, "Europe–US gas price spread (pull on US LNG exports)", "$/MMBtu"),
-                        width="stretch")
-
     s = dfp["storage_surplus_pct"].dropna().iloc[-260:]
     fig = go.Figure(go.Bar(x=s.index, y=s.values,
                            marker=dict(color=np.where(s.values >= 0, SERIES[0], SERIES[1]))))
@@ -251,19 +211,18 @@ with tab_p:
 with tab_m:
     st.markdown(f"""
 ### Data
-* **Demand:** EIA monthly natural gas deliveries to consumers in Massachusetts (MMcf), by end use.
+* **Demand:** EIA monthly Massachusetts gas deliveries (MMcf). The target is utility (LDC) load:
+  residential + commercial + industrial. Power-plant burn is excluded because it follows electricity
+  markets rather than heating weather.
 * **Price:** EIA daily Henry Hub spot, averaged to weeks ending Friday.
 * **Drivers:** EIA weekly working gas in storage (Lower 48), EIA monthly LNG exports.
-* **Geopolitical / trade risk:** Caldara-Iacoviello Geopolitical Risk index (daily), Baker-Bloom-Davis
-  Economic Policy Uncertainty (daily) and trade-policy uncertainty (monthly), Brent crude and the
-  IMF European gas price (FRED). All lagged to when they were published.
 * **Weather:** ERA5 daily max/min temperature via Open-Meteo. MA degree days weight Boston,
   Worcester and Springfield; the price model uses a five-city national proxy. HDD/CDD base 65°F.
 
 ### Demand models
 Seasonal naive · HDD regression · SARIMAX (HDD/CDD exogenous) · Prophet (HDD/CDD regressors) ·
 LightGBM · Hybrid (HDD regression + LightGBM on residuals). Expanding-window rolling-origin
-backtest, 12-month horizon, run once with **normal weather** (realistic) and once with **actual
+backtest, 12-month horizon, run once with **normal weather** (15-year normals, realistic) and once with **actual
 weather** (model skill only).
 
 ### Price models

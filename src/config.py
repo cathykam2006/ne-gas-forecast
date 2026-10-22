@@ -52,26 +52,6 @@ US_WEATHER_STATIONS = {
     "philadelphia": {"lat": 39.95, "lon": -75.17, "weight": 0.15},
 }
 
-# --- Geopolitical, trade-policy and global-market risk --------------------
-# FRED series (downloaded as CSV; no key needed).
-FRED_SERIES = {
-    "epu_daily": "USEPUINDXD",     # Baker-Bloom-Davis economic policy uncertainty, daily
-    "brent": "DCOILBRENTEU",       # Brent crude spot, daily, $/bbl
-    "eu_gas": "PNGASEUUSDM",       # IMF EU natural gas price, monthly, $/MMBtu
-    "trade_epu": "EPUTRADE",       # trade policy uncertainty (categorical EPU), monthly
-}
-# Caldara-Iacoviello Geopolitical Risk index, daily (war, terrorism, military
-# tensions measured from newspaper coverage). Updated weekly.
-GPR_DAILY_URLS = [
-    "https://www.matteoiacoviello.com/gpr_files/data_gpr_daily_recent.xls",
-    "https://matteoiacoviello.com/gpr_files/data_gpr_daily_recent.xls",
-]
-GPR_MANUAL_FILE = "gpr_daily.xls"   # fallback: download by hand into data/raw/
-
-# Publication lags for the monthly risk series
-EU_GAS_LAG_MONTHS = 2     # IMF prices appear mid-following-month
-TRADE_EPU_LAG_MONTHS = 1
-
 # Market events annotated on charts (context, not model inputs)
 EVENTS = [
     ("2020-03-11", "COVID-19 pandemic declared"),
@@ -80,6 +60,14 @@ EVENTS = [
     ("2022-06-08", "Freeport LNG outage"),
     ("2025-02-10", "China 15% tariff on US LNG"),
 ]
+
+# --- Demand model settings (chosen by backtest; see notebook 03) ----------
+# "ldc" = residential + commercial + industrial: the load gas utilities serve.
+# Power-plant burn is excluded: it follows electricity markets, not heating
+# weather, and most plants are not utility customers.
+DEMAND_TARGET = "ldc"
+NORMAL_YEARS = 15      # years of weather history behind "normal" HDD (recent winters are warmer)
+TRAIN_YEARS = None     # None = all history; an int = only the most recent N years
 
 HDD_BASE_F = 65.0
 CDD_BASE_F = 65.0

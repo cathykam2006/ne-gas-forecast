@@ -39,7 +39,10 @@ def build_demand_frame(consumption: pd.DataFrame, weather_daily: pd.DataFrame,
                        target: str = "total") -> pd.DataFrame:
     """Monthly modeling table: target volume + weather + calendar features."""
     dd = monthly_degree_days(weather_daily)
-    df = consumption[[target]].rename(columns={target: "y"}).join(dd, how="inner")
+    cons = consumption.copy()
+    if "ldc" not in cons:
+        cons["ldc"] = cons[["residential", "commercial", "industrial"]].sum(axis=1)
+    df = cons[[target]].rename(columns={target: "y"}).join(dd, how="inner")
     df["days"] = df.index.days_in_month
     df["hdd_per_day"] = df["hdd"] / df["days"]
     df["month"] = df.index.month
@@ -70,77 +73,9 @@ def _prior_year_weekly_norm(s: pd.Series, years: int = 5) -> pd.Series:
     return pd.Series(vals, index=s.index)
 
 
-def _monthly_known_from(m: pd.Series | pd.DataFrame, lag_months: int):
-    """Re-date monthly values to the first day they could have been known."""
-    m = m.copy()
-    m.index = m.index.to_period("M").to_timestamp() + pd.DateOffset(months=lag_months + 1)
-    return m
-
-
-def _carry_to(weekly_index: pd.DatetimeIndex, obj):
-    """Forward-fill a sparse series/frame onto a weekly index (as-of join)."""
-    return obj.reindex(obj.index.union(weekly_index)).ffill().reindex(weekly_index)
-
-
-def add_risk_features(df: pd.DataFrame, henry_hub_daily: pd.Series,
-                      risk: dict[str, pd.Series], W: str = "W-FRI") -> pd.DataFrame:
-    """Geopolitical, trade-policy and global-market features.
-
-    * gpr_*    Caldara-Iacoviello Geopolitical Risk (war, military threats,
-               terrorism in the news). Weekly average, lagged one week.
-    * epu_*    Baker-Bloom-Davis Economic Policy Uncertainty, lagged one week.
-    * trade_epu_z  Trade-policy uncertainty (tariffs), monthly, published lag.
-    * brent_ret_4  Brent crude 4-week change: global energy shocks.
-    * eu_hh_spread European gas minus Henry Hub ($/MMBtu): the pull on US LNG
-               exports. This is the channel through which the Russia-Ukraine
-               war reached US prices.
-    """
-    idx = df.index
-    if "gpr" in risk:
-        g = np.log(risk["gpr"].resample(W).mean().clip(lower=1))
-        g4 = g.rolling(4, min_periods=2).mean()
-        feat = pd.DataFrame({
-            "gpr_4w": g4,
-            "gpr_z": (g4 - g.rolling(52, min_periods=26).mean()) / g.rolling(52, min_periods=26).std(),
-        }).shift(1, freq=W)
-        df = df.join(feat)
-    if "epu_daily" in risk:
-        e = np.log(risk["epu_daily"].resample(W).mean().clip(lower=1))
-        e4 = e.rolling(4, min_periods=2).mean()
-        feat = pd.DataFrame({
-            "epu_4w": e4,
-            "epu_z": (e4 - e.rolling(52, min_periods=26).mean()) / e.rolling(52, min_periods=26).std(),
-        }).shift(1, freq=W)
-        df = df.join(feat)
-    if "trade_epu" in risk:
-        t = np.log(risk["trade_epu"].clip(lower=1))
-        tz = ((t - t.rolling(36, min_periods=12).mean()) / t.rolling(36, min_periods=12).std()).rename("trade_epu_z")
-        df = df.join(_carry_to(idx, _monthly_known_from(tz, config.TRADE_EPU_LAG_MONTHS)))
-    if "brent" in risk:
-        b = np.log(risk["brent"].resample(W).mean())
-        df["brent_ret_4"] = b.diff(4).reindex(idx)
-    if "eu_gas" in risk:
-        hh_m = henry_hub_daily.resample("MS").mean()
-        eu = risk["eu_gas"].copy()
-        eu.index = eu.index.to_period("M").to_timestamp()
-        spread = (eu - hh_m.reindex(eu.index)).rename("eu_hh_spread").dropna()
-        df = df.join(_carry_to(idx, _monthly_known_from(spread, config.EU_GAS_LAG_MONTHS)))
-    return df
-
-
-RISK_FEATURES_ALL = ["gpr_4w", "gpr_z", "epu_4w", "epu_z", "trade_epu_z",
-                     "brent_ret_4", "eu_hh_spread"]
-
-
-def risk_features_in(df: pd.DataFrame) -> list[str]:
-    """Risk columns actually present (a series may have failed to download)."""
-    return [c for c in RISK_FEATURES_ALL if c in df.columns and df[c].notna().sum() > 260]
-
-
 def build_price_frame(henry_hub_daily: pd.Series, storage: pd.Series,
                       lng_monthly: pd.Series, weather_us_daily: pd.DataFrame,
-                      horizons: tuple[int, ...] = (1, 4),
-                      risk: dict[str, pd.Series] | None = None) -> pd.DataFrame:
+                      horizons: tuple[int, ...] = (1, 4)) -> pd.DataFrame:
     """Weekly modeling table (weeks ending Friday).
 
     Every feature is as-of the end of week t and respects publication lags.
@@ -193,9 +128,6 @@ def build_price_frame(henry_hub_daily: pd.Series, storage: pd.Series,
     woy = df.index.isocalendar().week.astype(int)
     df["sin_w"] = np.sin(2 * np.pi * woy / 52)
     df["cos_w"] = np.cos(2 * np.pi * woy / 52)
-
-    if risk:
-        df = add_risk_features(df, henry_hub_daily, risk, W)
 
     for h in horizons:
         df[f"y_h{h}"] = df["log_p"].shift(-h) - df["log_p"]
