@@ -85,6 +85,30 @@ def main(root: Path):
         }, index=pd.Index(mm_.index, name="month"))
         sc.insert(0, "total", sc.sum(axis=1))
         sc.to_csv(raw / f"{st}_consumption.csv")
+    # EIA-176 company file (same layout as src.companies.download)
+    cos = [("MA", "17601391MA", "BOSTON GAS CO DBA NATIONAL GRID", 59), ("MA", "17615111MA", "NSTAR GAS COMPANY", 19),
+           ("MA", "17680531MA", "EVERSOURCE GAS CO OF MA", 23), ("MA", "17601093MA", "BERKSHIRE GAS COMPANY THE", 3),
+           ("CT", "17602792CT", "YANKEE GAS SVC CO", 16), ("CT", "17619018CT", "CONNECTICUT NAT GAS CORP", 16),
+           ("CT", "17619865CT", "SOUTHERN CONNECTICUT GAS COMPANY", 15), ("RI", "17681346RI", "THE NARRAGANSETT ELECCO DBA RIENERGY", 18),
+           ("NH", "17675803NH", "LIBERTY UTILITIES DBA ENERGY NORTH", 5), ("NH", "17600223NH", "NORTHERN UTILITIES INC", 2),
+           ("ME", "17617891ME", "NORTHERN UTILITIES DBA UNITIL CORP", 1.5), ("ME", "17676620ME", "SUMMIT NATURAL GAS OF MAINE INC", 0.4),
+           ("VT", "17618610VT", "VERMONT GAS SYSTEMS INC", 3.5)]
+    rows = []
+    for st_, cid, nm, bcf in cos:
+        for y in range(2010, 2025):
+            g = 1 + 0.01 * (y - 2010) + rng.normal(0, 0.03)
+            vals = {"res_volume": bcf * 1e6 * g, "com_volume": bcf * 0.9e6 * g, "ind_volume": bcf * 0.3e6 * g,
+                    "res_sales_customers": bcf * 14e3, "res_sales_volume": bcf * 0.98e6 * g,
+                    "res_sales_revenue": bcf * 0.98e6 * g * (14 + 0.5 * (y - 2010)) * (1 + rng.normal(0, 0.05)),
+                    "com_sales_customers": bcf * 1.5e3, "com_sales_volume": bcf * 0.5e6 * g,
+                    "com_sales_revenue": bcf * 0.5e6 * g * (11 + 0.4 * (y - 2010)),
+                    "res_transport_customers": bcf * 100, "com_transport_customers": bcf * 150,
+                    "citygate_sales_volume": bcf * 1.5e6 * g, "citygate_transport_volume": bcf * 0.7e6 * g,
+                    "lng_withdrawals": bcf * 0.03e6, "total_supply": bcf * 2.3e6 * g,
+                    "unaccounted_for": bcf * 0.02e6 * rng.normal(0, 1), "heat_content_btu_cf": 1030}
+            rows += [{"state": st_, "company_id": cid, "eia_name": nm, "item": k, "year": y, "value": v}
+                     for k, v in vals.items()]
+    pd.DataFrame(rows).to_csv(raw / "ne_companies_eia176.csv", index=False)
     print(f"Synthetic fixture written to {raw}")
 
 

@@ -35,13 +35,31 @@ def monthly_hdd_normals(hdd_monthly: pd.Series, years: int = 30) -> pd.DataFrame
 # --------------------------------------------------------------------------
 # Demand (monthly, Massachusetts)
 # --------------------------------------------------------------------------
+def complete_history(cons: pd.DataFrame, target: str) -> pd.DataFrame:
+    """Keep the contiguous run of complete months up to the first gap.
+
+    EIA publishes the newest month for small states late or withholds a
+    sector for a month or two. A monthly model needs an unbroken series, so
+    the history stops at the last month before the first missing one.
+    """
+    s = cons[target].where(cons[target] > 0)
+    s = s.loc[s.first_valid_index():]
+    full = s.reindex(pd.date_range(s.index[0], s.index[-1], freq="MS"))
+    gaps = full[full.isna()].index
+    end = gaps[0] - pd.offsets.MonthBegin(1) if len(gaps) else full.index[-1]
+    return cons.loc[s.index[0]:end]
+
+
 def build_demand_frame(consumption: pd.DataFrame, weather_daily: pd.DataFrame,
                        target: str = "total") -> pd.DataFrame:
     """Monthly modeling table: target volume + weather + calendar features."""
     dd = monthly_degree_days(weather_daily)
     cons = consumption.copy()
     if "ldc" not in cons:
-        cons["ldc"] = cons[["residential", "commercial", "industrial"]].sum(axis=1)
+        # Require all three sectors: EIA withholds some small-state values,
+        # and a partial sum would look like a collapse in demand.
+        cons["ldc"] = cons[["residential", "commercial", "industrial"]].sum(axis=1, min_count=3)
+    cons = complete_history(cons, target)
     df = cons[[target]].rename(columns={target: "y"}).join(dd, how="inner")
     df["days"] = df.index.days_in_month
     df["hdd_per_day"] = df["hdd"] / df["days"]

@@ -46,7 +46,12 @@ def _request(url: str, params: dict, retries: int = 4) -> dict:
         resp = requests.get(url, params=params, timeout=60)
         if resp.status_code == 200:
             return resp.json()
-        if resp.status_code in (429, 500, 502, 503, 504) and attempt < retries - 1:
+        if resp.status_code == 429 and attempt < retries - 1:
+            # Open-Meteo's free tier has a per-minute limit; wait it out.
+            print("  rate limit reached, waiting 65 seconds ...")
+            time.sleep(65)
+            continue
+        if resp.status_code in (500, 502, 503, 504) and attempt < retries - 1:
             time.sleep(2 ** attempt)
             continue
         raise RuntimeError(f"Request failed ({resp.status_code}): {resp.text[:300]}")
@@ -161,7 +166,7 @@ def weighted_degree_days(stations: dict, start: str = config.START_DATE,
         t = fetch_station_temps(st["lat"], st["lon"], start, end)
         frames.append(((t["tmax"] + t["tmin"]) / 2).rename(name))
         weights.append(st["weight"])
-        time.sleep(0.5)  # be polite to the free API
+        time.sleep(5)  # be polite to the free API (long ranges count as many calls)
     temps = pd.concat(frames, axis=1)
     w = np.array(weights) / np.sum(weights)
     out = pd.DataFrame(index=temps.index)

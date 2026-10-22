@@ -90,7 +90,7 @@ def rolling_backtest(df: pd.DataFrame, models=ALL_MODELS, first_origin: str = "2
             print(f"  origin {i + 1}/{len(origins)} ({origin:%Y-%m}) done")
     out = pd.DataFrame(rows)
     out["err"] = out["yhat"] - out["y"]
-    out["ape"] = (out["err"].abs() / out["y"]) * 100
+    out["ape"] = (out["err"].abs() / out["y"].where(out["y"] > 0)) * 100
     return out
 
 

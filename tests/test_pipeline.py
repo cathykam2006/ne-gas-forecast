@@ -131,3 +131,71 @@ def test_region_forecasts_every_state(raw):
     sc, fc, hist = region.run_region({k: raw["states"][k] for k in ("VT", "RI")}, step=12,
                                      verbose=False)
     assert set(fc["state"]) == {"VT", "RI"} and fc.groupby("state").size().eq(12).all()
+
+
+def test_history_stops_at_first_gap():
+    from src.features import complete_history
+    idx = pd.date_range("2020-01-01", "2020-12-01", freq="MS")
+    c = pd.DataFrame({"ldc": np.arange(1, 13, dtype=float)}, index=idx)
+    c.loc["2020-10-01", "ldc"] = np.nan          # withheld month
+    c.loc["2020-12-01", "ldc"] = 0               # unpublished month
+    out = complete_history(c, "ldc")
+    assert out.index[-1] == pd.Timestamp("2020-09-01")
+
+
+# ---------------------------------------------------------------- companies
+def _fake_ngqs(monkeypatch):
+    """Mimic the EIA NGQS JSON: area, company 'ID (NAME)', line, atype, yYYYY."""
+    from src import companies
+
+    def row(state, comp, line, atype, vals):
+        d = {"a": state, "b": comp, "line": line, "atype": atype, "c": "x"}
+        d.update({f"y{y}": v for y, v in vals.items()})
+        return d
+
+    yrs = range(2018, 2025)
+    data = []
+    for comp, scale in (("17601391MA (BOSTON GAS CO DBA NATIONAL GRID)", 1.0),
+                        ("17615111MA (NSTAR GAS COMPANY)", 0.35),
+                        ("17601248MA (COLONIAL GAS CO CO KEYSPAN)", 0.2),
+                        ("17616264MA (TENNESSEE GAS PIPELINE COMPANY)", 0.5)):
+        pipeline = "TENNESSEE" in comp
+        colonial_years = range(2018, 2020)
+        ys = colonial_years if "COLONIAL" in comp else yrs
+        if not pipeline:
+            data += [row("Massachusetts", comp, "101T", "VL", {y: 60e6 * scale for y in ys}),
+                     row("Massachusetts", comp, "102T", "VL", {y: 50e6 * scale for y in ys}),
+                     row("Massachusetts", comp, "1010", "CT", {y: 870e3 * scale for y in ys}),
+                     row("Massachusetts", comp, "1010", "VL", {y: 58e6 * scale for y in ys}),
+                     row("Massachusetts", comp, "1010", "CS", {y: 1.33e9 * scale for y in ys}),
+                     row("Massachusetts", comp, "900", "VL", {y: 1030 for y in ys})]
+        else:
+            data += [row("Massachusetts", comp, "103T", "VL", {y: 5e6 for y in ys})]
+    data.append(row("Massachusetts", " Total of All Companies", "101T", "VL", {2024: 1}))
+
+    class R:
+        status_code = 200
+
+        def json(self):
+            return {"data": data}
+
+    monkeypatch.setattr(companies.requests, "get", lambda *a, **k: R())
+
+
+def test_company_pipeline(monkeypatch):
+    from src import companies
+    _fake_ngqs(monkeypatch)
+    raw = companies.fetch(2018, 2024)
+    t = companies.company_table(raw)
+    # pipelines dropped; Colonial merged into Boston Gas
+    assert set(t["company"]) == {"National Grid – Boston Gas", "Eversource – NSTAR Gas"}
+    bg = t[(t["company"] == "National Grid – Boston Gas")].set_index("year")
+    assert bg.loc[2018, "ldc_volume_mcf"] > bg.loc[2024, "ldc_volume_mcf"]
+    # $1.33bn / 58m Mcf / 10.30 therms per Mcf
+    assert abs(bg.loc[2024, "res_price_per_therm"] - 1.33e9 / 58e6 / 10.30) < 1e-9
+    sh = companies.shares(t)
+    assert abs(sh["share"].sum() - 1) < 1e-9
+    fc = pd.DataFrame({"state": "MA", "month": pd.date_range("2026-08-01", periods=2, freq="MS"),
+                       "normal": [100.0, 200.0]})
+    cf = companies.company_forecasts(fc, sh)
+    assert np.isclose(cf.groupby("month")["normal"].sum().values, [100, 200]).all()

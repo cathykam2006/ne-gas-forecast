@@ -51,6 +51,7 @@ def load():
         "co_fc": opt("company_forecasts.csv", parse_dates=["month"]),
         "co_shares": opt("company_shares.csv"),
         "co_price": opt("company_prices.csv"),
+        "co_annual": opt("company_annual.csv"),
     }
 
 
@@ -196,7 +197,11 @@ with tab_ne:
         summ["Skill vs naive %"] = best_rows["Skill vs naive %"]
         summ.index = [names.get(i, i) for i in summ.index]
         c1, c2, c3 = st.columns(3)
-        c1.metric("New England utility demand, next winter (normal)", f"{summ['normal'].sum():,.0f} Bcf")
+        all_ne = {"MA", "CT", "RI", "NH", "ME", "VT"}
+        missing = sorted(all_ne - set(rf["state"]))
+        label = "New England utility demand, next winter (normal)" + (
+            f", excl. {', '.join(missing)}" if missing else "")
+        c1.metric(label, f"{summ['normal'].sum():,.0f} Bcf")
         c2.metric("Cold-winter upside", f"{(summ['cold'].sum() / summ['normal'].sum() - 1) * 100:+.1f}%")
         c3.metric("States modeled", f"{len(summ)}")
         st.dataframe(summ.rename(columns={"normal": "Winter Bcf (normal)", "cold": "Winter Bcf (cold)",
@@ -213,51 +218,87 @@ with tab_ne:
         st.plotly_chart(scenario_chart(hs, fs, f"{names[state]} utility gas demand · {fs['model'].iloc[0]}"),
                         width="stretch")
 
-        st.subheader("By company")
-        cf, sh = D["co_fc"], D["co_shares"]
-        if cf is None:
-            st.info("Company breakdown appears once the EIA-176 company file is added "
-                    "(see README, 'Company data').")
+        st.subheader(f"{names[state]} by gas company")
+        cf, sh, ca = D["co_fc"], D["co_shares"], D["co_annual"]
+        if cf is None or ca is None:
+            st.info("Company breakdown appears after the pipeline downloads EIA Form 176 company "
+                    "data (`python -m src.companies`).")
         else:
-            shs = sh[sh["state"] == state].sort_values("share", ascending=False)
+            cas = ca[ca["state"] == state]
+            last_y = int(cas["year"].max())
+            lat = cas[cas["year"] == last_y].set_index("company")
+            shs = sh[sh["state"] == state].set_index("company")
             cfs = cf[cf["state"] == state]
             wins = (cfs[cfs["month"].dt.month.isin(WINTER_M)].groupby("company")[["normal", "cold"]]
                     .sum() / 1000)
-            tbl = shs.set_index("company")[["share", "share_trend_pts"]].join(wins)
-            st.dataframe(tbl.rename(columns={"share": "Share of state utility load",
-                                             "share_trend_pts": "Share change, 5 yrs (pts)",
-                                             "normal": "Winter Bcf (normal)",
-                                             "cold": "Winter Bcf (cold)"})
-                         .style.format({"Share of state utility load": "{:.1%}",
-                                        "Share change, 5 yrs (pts)": "{:+.1f}",
-                                        "Winter Bcf (normal)": "{:,.2f}", "Winter Bcf (cold)": "{:,.2f}"}),
-                         width="stretch")
-            top = shs["company"].head(8).tolist()
+            tbl = pd.DataFrame({
+                "Share of state utility load": shs["share"],
+                "Share change, 5 yrs (pts)": shs["share_trend_pts"],
+                "Winter Bcf, normal": wins["normal"],
+                "Winter Bcf, cold": wins["cold"],
+                f"Customers ({last_y})": lat["total_customers"],
+                f"Residential $/therm ({last_y})": lat["res_price_per_therm"],
+                f"Commercial $/therm ({last_y})": lat["com_price_per_therm"],
+                "Therms per home": lat["use_per_res_customer_therms"],
+                "Transport (choice) share of supply %": lat["transport_share_pct"],
+                "Unaccounted-for gas %": lat["unaccounted_pct"],
+            }).sort_values("Share of state utility load", ascending=False)
+            st.dataframe(tbl.style.format({
+                "Share of state utility load": "{:.1%}", "Share change, 5 yrs (pts)": "{:+.1f}",
+                "Winter Bcf, normal": "{:,.2f}", "Winter Bcf, cold": "{:,.2f}",
+                f"Customers ({last_y})": "{:,.0f}", f"Residential $/therm ({last_y})": "${:.2f}",
+                f"Commercial $/therm ({last_y})": "${:.2f}", "Therms per home": "{:,.0f}",
+                "Transport (choice) share of supply %": "{:.0f}", "Unaccounted-for gas %": "{:+.1f}",
+            }, na_rep="–"), width="stretch")
+            st.caption("EIA Form 176 annual company reports. Shares are the latest three years' average "
+                       "of residential + commercial + industrial deliveries; company forecasts apply "
+                       "them to the state's monthly forecast. Prices are sales revenue ÷ sales volume "
+                       "(supply, delivery and fixed charges together), converted with each company's "
+                       "reported heat content.")
+
+            order = tbl.index.tolist()
+            colors = {c: SERIES[i % len(SERIES)] for i, c in enumerate(order)}
+            a1, a2 = st.columns(2)
+            with a1:
+                fig = go.Figure()
+                for c in order:
+                    d = cfs[cfs["company"] == c]
+                    fig.add_trace(go.Scatter(x=d["month"], y=d["normal"] / 1000, name=c,
+                                             line=dict(color=colors[c], width=2)))
+                fig = style(fig, "12-month demand forecast by company (normal weather)",
+                            "Bcf per month", 480)
+                fig.update_layout(legend=dict(orientation="h", y=-0.18, yanchor="top", x=0),
+                                  margin=dict(b=110))
+                st.plotly_chart(fig, width="stretch")
+            with a2:
+                fig = go.Figure()
+                for c in order:
+                    d = cas[cas["company"] == c]
+                    fig.add_trace(go.Scatter(x=d["year"], y=d["res_price_per_therm"], name=c,
+                                             mode="lines+markers", line=dict(color=colors[c], width=2),
+                                             marker=dict(size=6)))
+                fig = style(fig, "Average residential price by company", "$/therm", 480)
+                fig.update_layout(legend=dict(orientation="h", y=-0.18, yanchor="top", x=0),
+                                  margin=dict(b=110))
+                st.plotly_chart(fig, width="stretch")
+
+            co_sel = st.selectbox("Company detail", order)
+            d = cas[cas["company"] == co_sel].set_index("year")
             fig = go.Figure()
-            for i, co in enumerate(top):
-                d = cfs[cfs["company"] == co]
-                fig.add_trace(go.Scatter(x=d["month"], y=d["normal"] / 1000, name=co,
-                                         line=dict(color=SERIES[i % len(SERIES)], width=2)))
-            st.plotly_chart(style(fig, f"{names[state]}: 12-month forecast by company (normal weather)",
-                                  "Bcf per month"), width="stretch")
-            st.caption("Company forecasts split the state forecast by each company's average share of "
-                       "utility deliveries over the latest three years of EIA Form 176 (annual).")
-            cp = D["co_price"]
-            if cp is not None:
-                cps = cp[cp["state"] == state]
-                if len(cps):
-                    yr = cps["year"].max()
-                    lat = cps[cps["year"] == yr].sort_values("residential_per_therm")
-                    fig = go.Figure(go.Bar(x=lat["residential_per_therm"], y=lat["company"],
-                                           orientation="h", marker=dict(color=SERIES[0])))
-                    fig.update_layout(hovermode="closest")
-                    fig = style(fig, f"Average residential price per therm, {yr} (EIA-176 revenue ÷ volume)",
-                                "", 360)
-                    fig.update_xaxes(title="$/therm", showgrid=True, gridcolor=GRID)
-                    fig.update_yaxes(showgrid=False)
-                    st.plotly_chart(fig, width="stretch")
-                    st.caption("All-in average for sales customers: supply, delivery and fixed charges "
-                               "divided by therms sold. Converted from $/Mcf at 10.37 therms per Mcf.")
+            fig.add_trace(go.Bar(x=d.index, y=d["citygate_sales_volume"] / 1e6,
+                                 name="Supply: citygate, sales customers", marker=dict(color=SERIES[0])))
+            fig.add_trace(go.Bar(x=d.index, y=d["citygate_transport_volume"] / 1e6,
+                                 name="Supply: citygate, transport customers", marker=dict(color=SERIES[2])))
+            fig.add_trace(go.Bar(x=d.index, y=d["lng_withdrawals"] / 1e6,
+                                 name="Supply: LNG withdrawals", marker=dict(color=SERIES[3])))
+            fig.add_trace(go.Scatter(x=d.index, y=d["ldc_volume_mcf"] / 1e6, name="Demand: deliveries",
+                                     mode="lines+markers", line=dict(color=INK, width=2.5)))
+            fig.update_layout(barmode="stack")
+            st.plotly_chart(style(fig, f"{co_sel}: annual supply vs. customer deliveries", "Bcf per year",
+                                  440), width="stretch")
+            st.caption("Supply = gas received at the citygate (bought for sales customers, or "
+                       "delivered for customers who buy from marketers) plus LNG withdrawals. "
+                       "The gap to deliveries is storage, company use, losses and unaccounted-for gas.")
 
 # ------------------------------------------------------------------ MA tariffs
 with tab_t:
@@ -390,7 +431,7 @@ with tab_m:
   markets rather than heating weather.
 * **Price:** EIA daily Henry Hub spot, averaged to weeks ending Friday.
 * **Drivers:** EIA weekly working gas in storage (Lower 48), EIA monthly LNG exports.
-* **New England:** the same demand method run for CT, RI, NH, ME and VT, each with its own weather
+* **New England:** the same demand method run for CT, RI, NH, ME and VT (each state's history ends at its last month with all sectors reported), each with its own weather
   stations; company forecasts split each state's forecast by EIA Form 176 delivery shares.
 * **MA price per therm:** GAF and LDAF by company and rate class from the Massachusetts DPU
   (current-rates page and historical workbook, 2008 onward). Ccf rates converted at 1.037 therms/Ccf.

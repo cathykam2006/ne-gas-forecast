@@ -66,7 +66,11 @@ Random walk (benchmark) · Ridge on momentum · Ridge on fundamentals · Ridge o
 Walk-forward evaluation with quarterly refits. Every challenger is compared to the random walk with a **Diebold–Mariano test** (Newey–West variance, Harvey–Leybourne–Newbold correction), so a small edge isn't mistaken for skill. LightGBM's native **TreeSHAP** shows which drivers move the forecast.
 
 ### New England by state and company
-The Massachusetts method (utility-load target, 15-year normals, rolling-origin backtest) runs for Connecticut, Rhode Island, New Hampshire, Maine and Vermont, each with its own weather stations; each state keeps whichever model backtests best. Company forecasts split each state's monthly forecast by the company's share of utility deliveries in EIA Form 176 (annual company reports; latest three years), and company retail prices per therm come from Form 176 revenue ÷ volume.
+The Massachusetts method (utility-load target, 15-year normals, rolling-origin backtest) runs for Connecticut, Rhode Island, New Hampshire, Maine and Vermont (each state's history ends at its last fully reported month, since EIA publishes or withholds small-state sectors late), each with its own weather stations; each state keeps whichever model backtests best. For each of the ~25 New England gas utilities (EIA Form 176 annual company reports, 2010 onward, read from EIA's Natural Gas Query System):
+- **Demand:** residential, commercial and industrial deliveries (sales + transportation), customer counts, use per home; a 12-month forecast that splits the state forecast by the company's share of state utility deliveries (latest three years).
+- **Supply:** gas received at the citygate for sales customers and for transportation (customer-choice) customers, LNG withdrawals, total supply, and unaccounted-for gas.
+- **Price:** average residential and commercial price per therm (sales revenue ÷ volume, using each company's reported heat content).
+Predecessor filings are merged into successors (Colonial → Boston Gas, Columbia → Eversource Gas of MA, Narragansett → Rhode Island Energy); pipelines, LNG and CNG suppliers are excluded.
 
 ### Massachusetts price per therm: GAF and LDAF
 - **GAF** (Gas Adjustment Factor) recovers gas supply, interstate transportation and storage costs dollar-for-dollar; set per peak/off-peak season with mid-season revisions.
@@ -91,7 +95,8 @@ The Massachusetts method (utility-load target, 15-year normals, rolling-origin b
 │   ├── demand_models.py        six demand models, common interface
 │   ├── demand_backtest.py      rolling-origin backtest, scenarios, weather normalization
 │   ├── price_models.py         price models, walk-forward, Diebold–Mariano
-│   ├── region.py               New England state forecasts and company split
+│   ├── region.py               New England state forecasts
+│   ├── companies.py            EIA-176 company supply, demand, prices; company forecasts
 │   ├── tariffs.py              MA GAF/LDAF parser (DPU page + workbook)
 │   ├── pipeline.py             end-to-end run → data/processed/
 │   └── plotting.py             shared chart style

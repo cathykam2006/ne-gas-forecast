@@ -11,7 +11,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from . import config, data, features, region, tariffs
+from . import companies, config, data, features, region, tariffs
 from . import demand_backtest as dbt
 from . import demand_models as dm
 from . import price_models as pm
@@ -65,6 +65,9 @@ def run(pull: bool = False, quick: bool = False) -> dict:
         rh.to_csv(out / "region_history.csv", index=False)
         best = rs[rs["model"] != "Seasonal naive"].sort_values("MAPE %").groupby("state").first()
         print(best[["model", "MAPE %", "Skill vs naive %"]].round(2).to_string())
+
+        print("\n[New England] company breakdown (EIA Form 176)")
+        companies.run(region_fc=rf, fetch_data=pull)
 
     # ---------------- MA GAF / LDAF ----------------
     wb, page = config.RAW_DIR / tariffs.WORKBOOK_FILE, config.RAW_DIR / tariffs.PAGE_FILE

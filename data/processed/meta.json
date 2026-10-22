@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-10-22T15:49",
+  "run_at": "2026-10-22T16:32",
   "demand_data_through": "2026-07",
   "price_data_through": "2026-10-16",
   "best_demand_model": "SARIMAX",
