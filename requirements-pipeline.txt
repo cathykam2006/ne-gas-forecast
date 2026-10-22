@@ -1,0 +1,11 @@
+# Full pipeline: data pull, models, notebooks, tests
+-r requirements.txt
+requests>=2.32
+scipy>=1.14
+scikit-learn>=1.6
+statsmodels>=0.14
+lightgbm>=4.5
+prophet>=1.1.6
+jupyter
+nbformat>=5.10
+pytest>=8.0

@@ -1,0 +1,109 @@
+# New England Natural Gas: Demand & Price Forecasting
+
+Forecasts **Massachusetts monthly natural gas demand** 1–12 months ahead under normal, cold and warm weather, and the **Henry Hub spot price** 1 and 4 weeks ahead, using only public data. Built to the standards a utility or energy-trading team would expect: weather normalization, rolling-origin backtests, honest benchmarks, and explicit controls for look-ahead leakage.
+
+**Live app:** _add your Streamlit link here_ · **Author:** Cathy Kam
+
+---
+
+## Why it matters
+
+Gas utilities plan supply portfolios, storage and pipeline capacity around winter demand under a range of weather outcomes, and regulators review those plans and the costs passed to customers. Two practical questions drive this project:
+
+1. **How much gas will Massachusetts need next winter, and how much more if it's cold?**
+2. **Do supply/demand fundamentals tell us anything about near-term Henry Hub prices that a "no change" forecast doesn't?**
+
+## Results
+
+_Fill in after running the pipeline on real data (`data/processed/demand_scores.csv`, `price_scores_h4.csv`):_
+
+| | Best model | Backtest accuracy | vs. benchmark |
+|---|---|---|---|
+| MA demand, 1–12 mo, normal weather | … | MAPE …% | …% better than seasonal naive |
+| Henry Hub, 4 weeks | … | RMSE $… | …% vs. random walk (DM p = …) |
+
+Key findings: weather sensitivity of ~… MMcf per HDD; a cold (P90) winter adds ~…% to Nov–Mar demand; weather-normalized demand trend of …% per year.
+
+## Approach
+
+### Data (all public)
+| Data | Source | Frequency |
+|---|---|---|
+| MA deliveries to consumers by end use (MMcf) | EIA API v2 (`N3060MA2`, `N3010MA2`, `N3020MA2`, `N3035MA2`, `N3045MA2`) | Monthly |
+| Henry Hub spot ($/MMBtu) | EIA API v2 (`RNGWHHD`) | Daily |
+| Working gas in storage, Lower 48 / East (Bcf) | EIA Weekly Natural Gas Storage Report | Weekly |
+| U.S. LNG exports (MMcf) | EIA API v2 (`N9133US2`) | Monthly |
+| Daily max/min temperature | Open-Meteo ERA5 archive (no key) | Daily |
+
+Massachusetts heating degree days weight Boston (70%), Worcester (18%) and Springfield (12%). The price model uses a five-city national weather proxy.
+
+### Demand models
+Seasonal naive (benchmark) · **HDD regression** (utility standard, interpretable) · **SARIMAX** with HDD/CDD · **Prophet** with HDD/CDD regressors · **LightGBM** · **Hybrid**: HDD regression + LightGBM on its residuals.
+
+Evaluated with an expanding-window rolling-origin backtest (origins every quarter since Dec 2015, 12-month horizon), run twice:
+- **Normal weather (ex-ante):** future HDD set to 30-year normals known at the origin, i.e. a real forecast.
+- **Actual weather (ex-post):** future HDD set to what happened, isolating model skill from weather uncertainty.
+
+Forecasts are produced for **normal, cold (P90 HDD) and warm (P10 HDD)** winters, with 90% intervals from each model's own backtest errors by horizon. Demand history is also **weather-normalized** to separate warm winters from structural change such as efficiency and electrification.
+
+### Price models
+Target: log change in weekly average Henry Hub price, 1 and 4 weeks ahead.
+Random walk (benchmark) · Ridge on momentum · Ridge on fundamentals · Ridge on all features · LightGBM. Features: storage surplus vs. prior 5-year average, injections vs. normal, national degree-day anomaly, LNG export level and growth, price momentum and volatility, seasonality.
+
+Walk-forward evaluation with quarterly refits. Every challenger is compared to the random walk with a **Diebold–Mariano test** (Newey–West variance, Harvey–Leybourne–Newbold correction), so a small edge isn't mistaken for skill. LightGBM's native **TreeSHAP** shows which drivers move the forecast.
+
+### Leakage controls (unit-tested in `tests/`)
+- Storage enters with a one-week lag (the report for week *t* is released the following Thursday).
+- LNG exports are used only after a two-month publication delay.
+- Seasonal "normals" use prior years only.
+- Models train only on targets already realized at each refit date; the backtest never sees the future.
+
+## Repository
+
+```
+├── app.py                      Streamlit dashboard
+├── src/
+│   ├── config.py               series IDs, stations, publication lags
+│   ├── data.py                 EIA API v2 + Open-Meteo pulls
+│   ├── features.py             degree days, normals, storage/LNG features
+│   ├── demand_models.py        six demand models, common interface
+│   ├── demand_backtest.py      rolling-origin backtest, scenarios, weather normalization
+│   ├── price_models.py         price models, walk-forward, Diebold–Mariano
+│   ├── pipeline.py             end-to-end run → data/processed/
+│   └── plotting.py             shared chart style
+├── notebooks/
+│   ├── 01_data_acquisition.ipynb
+│   ├── 02_eda.ipynb
+│   ├── 03_demand_forecasting.ipynb
+│   └── 04_price_forecasting.ipynb
+├── tests/                      leakage and sanity tests (synthetic fixture)
+└── .github/workflows/refresh.yml   weekly automated refresh
+```
+
+## Run it
+
+```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements-pipeline.txt
+
+export EIA_API_KEY=your_key        # free: https://www.eia.gov/opendata/register.php
+python -m src.pipeline --pull      # pulls data, runs backtests (~5-10 min), writes data/processed/
+pytest -q tests/                   # leakage tests
+streamlit run app.py
+```
+
+Then work through the notebooks in order.
+
+## Deploy
+
+1. Commit `data/processed/` (the app reads only these files; no API key needed to view).
+2. On Streamlit Community Cloud, point a new app at `app.py`. `requirements.txt` holds only the app's light dependencies.
+3. Optional: add `EIA_API_KEY` as a GitHub Actions secret to enable the weekly refresh workflow, which reruns the pipeline every Friday after the storage report and commits new results.
+
+## Limitations and next steps
+- EIA publishes state deliveries monthly with a ~2-month lag; daily utility sendout data would allow day-ahead and design-day modeling.
+- The price model uses realized weather; adding NOAA 6–10 day forecasts would capture what traders actually react to.
+- New England basis (Algonquin citygate) is the price that matters most locally, but daily history is not freely available.
+
+---
+*Created by Cathy Kam. Uses public data only.*
