@@ -1,10 +1,12 @@
 # New England Natural Gas: Demand & Price Forecasting
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ne-gas-forecast-zmi45pfx6pdyncuxxazxcq.streamlit.app/)
+
 Forecasts **New England utility gas demand by state and company**, breaks down **Massachusetts gas prices per therm into GAF and LDAF** for every utility since 2008, and forecasts **Massachusetts monthly natural gas demand** 1–12 months ahead under normal, cold and warm weather, and the **Henry Hub spot price** 1 and 4 weeks ahead, using only public data. Built to the standards a utility or energy-trading team would expect: weather normalization, rolling-origin backtests, honest benchmarks, and explicit controls for look-ahead leakage.
 
 **App tabs:** Gas companies (map, treemap, leaderboard and deep dive for every New England utility) · New England by state · Massachusetts demand · MA price per therm (GAF/LDAF) · Henry Hub price · Method
 
-**Live app:** _add your Streamlit link here_ · **Author:** Cathy Kam
+**Live app:** [https://ne-gas-forecast-zmi45pfx6pdyncuxxazxcq.streamlit.app/](https://ne-gas-forecast-zmi45pfx6pdyncuxxazxcq.streamlit.app/) · **Author:** Cathy Kam
 
 ---
 
