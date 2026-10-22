@@ -15,7 +15,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from . import config
-from .features import PRICE_FEATURES
+from .features import PRICE_FEATURES, risk_features_in
 
 FUNDAMENTALS = ["storage_surplus_pct", "injection_vs_norm_bcf", "dd_anom",
                 "dd_anom_4", "lng_yoy_pct", "lng_bcfd", "sin_w", "cos_w"]
@@ -47,10 +47,8 @@ class RidgeModel:
 
 
 class LGBMPrice:
-    name = "LightGBM (all features)"
-
-    def __init__(self, cols=PRICE_FEATURES):
-        self.cols = cols
+    def __init__(self, cols=PRICE_FEATURES, name="LightGBM (all features)"):
+        self.cols, self.name = list(cols), name
 
     def fit(self, X, y):
         import lightgbm as lgb
@@ -72,19 +70,27 @@ class LGBMPrice:
         return pd.DataFrame(c[:, :-1], columns=self.cols, index=X.index)
 
 
-def model_zoo():
-    return [
+RISK_RIDGE = "Ridge (all + geopolitical/trade risk)"
+RISK_LGBM = "LightGBM (all + geopolitical/trade risk)"
+
+
+def model_zoo(risk_cols: list[str] | None = None):
+    zoo = [
         RandomWalk(),
         RidgeModel(MOMENTUM, "Ridge (momentum only)"),
         RidgeModel(FUNDAMENTALS, "Ridge (fundamentals)"),
         RidgeModel(PRICE_FEATURES, "Ridge (all features)"),
         LGBMPrice(),
     ]
+    if risk_cols:
+        zoo += [RidgeModel(PRICE_FEATURES + risk_cols, RISK_RIDGE),
+                LGBMPrice(PRICE_FEATURES + risk_cols, RISK_LGBM)]
+    return zoo
 
 
 def walk_forward(df: pd.DataFrame, h: int = 1, first_test: str = "2015-01-01",
                  refit_every: int = 13, min_train: int = 260,
-                 models_fn=model_zoo) -> pd.DataFrame:
+                 models_fn=model_zoo, use_risk: bool = True) -> pd.DataFrame:
     """Expanding-window walk-forward test.
 
     At each refit date the models are trained only on rows whose target is
@@ -92,7 +98,9 @@ def walk_forward(df: pd.DataFrame, h: int = 1, first_test: str = "2015-01-01",
     `refit_every` weeks out-of-sample.
     """
     target = f"y_h{h}"
-    data = df.dropna(subset=PRICE_FEATURES + ["log_p"]).copy()
+    risk_cols = risk_features_in(df) if use_risk else []
+    # Every model is scored on exactly the same weeks, so comparisons are fair.
+    data = df.dropna(subset=PRICE_FEATURES + risk_cols + ["log_p"]).copy()
     test_idx = data.index[data.index >= pd.Timestamp(first_test)]
     test_idx = test_idx[data.loc[test_idx, target].notna()]
     rows = []
@@ -103,9 +111,9 @@ def walk_forward(df: pd.DataFrame, h: int = 1, first_test: str = "2015-01-01",
         train = data[data.index < cutoff].dropna(subset=[target]).iloc[:-h or None]
         if len(train) < min_train:
             continue
-        for m in models_fn():
-            m.fit(train[PRICE_FEATURES], train[target])
-            pred = m.predict(data.loc[block, PRICE_FEATURES])
+        for m in models_fn(risk_cols):
+            m.fit(train, train[target])
+            pred = m.predict(data.loc[block])
             for d, p in zip(block, pred):
                 rows.append({"date": d, "model": m.name, "pred": p,
                              "y": data.at[d, target], "price": data.at[d, "price"]})
@@ -157,15 +165,29 @@ def score_price(wf: pd.DataFrame, h: int = 1) -> pd.DataFrame:
     return out.sort_values("RMSE log-return")
 
 
+def compare_models(wf: pd.DataFrame, challenger: str, base: str, h: int) -> dict:
+    """Diebold-Mariano test of one model against another (not the random walk).
+
+    Used for the ablation question: does adding geopolitical/trade-risk
+    features improve on the same model without them?
+    """
+    a = wf[wf["model"] == challenger].set_index("date")
+    b = wf[wf["model"] == base].set_index("date").loc[a.index]
+    ea, eb = (a["pred"] - a["y"]).values, (b["pred"] - b["y"]).values
+    stat, p = diebold_mariano(ea, eb, h)
+    return {"challenger": challenger, "base": base, "h": h,
+            "RMSE change %": (np.sqrt(np.mean(ea ** 2)) / np.sqrt(np.mean(eb ** 2)) - 1) * 100,
+            "DM stat": stat, "DM p-value": p}
+
+
 def latest_forecast(df: pd.DataFrame, model, h: int) -> dict:
-    """Fit on everything known now and forecast h weeks ahead, with an
-    interval from the model's walk-forward residual quantiles."""
+    """Fit on everything known now and forecast h weeks ahead."""
     target = f"y_h{h}"
-    data = df.dropna(subset=PRICE_FEATURES + ["log_p"])
+    data = df.dropna(subset=list(dict.fromkeys(PRICE_FEATURES + getattr(model, "cols", []) + ["log_p"])))
     train = data.dropna(subset=[target])
-    model.fit(train[PRICE_FEATURES], train[target])
+    model.fit(train, train[target])
     x_now = data.iloc[[-1]]
-    r = float(model.predict(x_now[PRICE_FEATURES])[0])
+    r = float(model.predict(x_now)[0])
     p0 = float(x_now["price"].iloc[0])
     return {"as_of": x_now.index[0], "price_now": p0, "h": h,
             "pred_logret": r, "price_fcst": p0 * np.exp(r)}

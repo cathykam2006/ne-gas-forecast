@@ -58,10 +58,13 @@ def run(pull: bool = False, quick: bool = False) -> dict:
     # ---------------- Price ----------------
     print("\n[Price] building features")
     dfp = features.build_price_frame(raw["henry_hub"], raw["storage_l48"],
-                                     raw["lng_exports"], raw["weather_us"])
+                                     raw["lng_exports"], raw["weather_us"],
+                                     risk=raw.get("risk"))
     dfp.to_csv(out / "price_frame.csv")
+    risk_cols = features.risk_features_in(dfp)
+    print(f"[Price] geopolitical/trade-risk features available: {risk_cols or 'none'}")
 
-    price_scores, latest = {}, []
+    price_scores, latest, ablation = {}, [], []
     for h in (1, 4):
         print(f"[Price] walk-forward h={h}")
         wf = pm.walk_forward(dfp, h=h, refit_every=26 if quick else 13)
@@ -70,18 +73,26 @@ def run(pull: bool = False, quick: bool = False) -> dict:
         sc.to_csv(out / f"price_scores_h{h}.csv")
         price_scores[h] = sc
         print(sc.round(4).to_string())
-        for m in pm.model_zoo():
+        if risk_cols:
+            ablation.append(pm.compare_models(wf, pm.RISK_RIDGE, "Ridge (all features)", h))
+            ablation.append(pm.compare_models(wf, pm.RISK_LGBM, "LightGBM (all features)", h))
+        for m in pm.model_zoo(risk_cols):
             f = pm.latest_forecast(dfp, m, h)
             f["model"] = m.name
             latest.append(f)
     pd.DataFrame(latest).to_csv(out / "price_latest_forecasts.csv", index=False)
+    if ablation:
+        ab = pd.DataFrame(ablation)
+        ab.to_csv(out / "price_risk_ablation.csv", index=False)
+        print("\n[Price] Do geopolitical/trade-risk features help? (negative = better)")
+        print(ab.round(4).to_string(index=False))
 
-    # SHAP on the full-history LightGBM, h=4
-    lg = pm.LGBMPrice()
-    tr = dfp.dropna(subset=features.PRICE_FEATURES + ["y_h4"])
-    lg.fit(tr[features.PRICE_FEATURES], tr["y_h4"])
-    allx = dfp.dropna(subset=features.PRICE_FEATURES)
-    lg.shap(allx).to_csv(out / "price_shap_h4.csv")
+    # SHAP on the full-history LightGBM (with risk features when available), h=4
+    cols = features.PRICE_FEATURES + risk_cols
+    lg = pm.LGBMPrice(cols)
+    tr = dfp.dropna(subset=cols + ["y_h4"])
+    lg.fit(tr, tr["y_h4"])
+    lg.shap(dfp.dropna(subset=cols)).to_csv(out / "price_shap_h4.csv")
 
     meta = {
         "run_at": datetime.now().isoformat(timespec="minutes"),

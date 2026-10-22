@@ -72,6 +72,17 @@ def main(root: Path):
     ramp = np.clip((mm.year + mm.month / 12 - 2016) / 8, 0, 1)
     lng = 3000 + 450000 * ramp + rng.normal(0, 8000, len(mm)).clip(-2000)
     pd.DataFrame({"value": np.abs(lng)}, index=pd.Index(mm, name="period")).to_csv(raw / "lng_exports.csv")
+    # Risk series (same file layout as data.pull_risk)
+    dd = pd.date_range("2001-01-01", "2026-10-16", freq="D")
+    gpr = np.exp(np.log(100) + np.cumsum(rng.normal(0, 0.02, len(dd))) * 0.3 + rng.normal(0, 0.3, len(dd)))
+    epu = np.exp(np.log(120) + rng.normal(0, 0.4, len(dd)))
+    brent = np.exp(np.log(70) + np.cumsum(rng.normal(0, 0.02, len(dd))) * 0.5)
+    for name, v, idx in (("gpr", gpr, dd), ("epu_daily", epu, dd), ("brent", brent, dd)):
+        pd.DataFrame({"value": v}, index=pd.Index(idx, name="period")).to_csv(raw / f"risk_{name}.csv")
+    eu = 6 + 4 * np.abs(np.sin(np.arange(len(mm)) / 30)) + rng.normal(0, 1, len(mm))
+    tpu = np.exp(np.log(100) + rng.normal(0, 0.5, len(mm)))
+    pd.DataFrame({"value": eu}, index=pd.Index(mm, name="period")).to_csv(raw / "risk_eu_gas.csv")
+    pd.DataFrame({"value": tpu}, index=pd.Index(mm, name="period")).to_csv(raw / "risk_trade_epu.csv")
     print(f"Synthetic fixture written to {raw}")
 
 

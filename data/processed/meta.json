@@ -1,0 +1,7 @@
+{
+  "run_at": "2026-10-22T14:33",
+  "demand_data_through": "2026-07",
+  "price_data_through": "2026-10-16",
+  "best_demand_model": "SARIMAX",
+  "mmcf_per_hdd": 29.42
+}

@@ -1,0 +1,5 @@
+challenger,base,h,RMSE change %,DM stat,DM p-value
+Ridge (all + geopolitical/trade risk),Ridge (all features),1,0.22395466827740407,2.088577161794648,0.037489258585634774
+LightGBM (all + geopolitical/trade risk),LightGBM (all features),1,-0.07461250484608328,-0.14557715523158693,0.8843414688890505
+Ridge (all + geopolitical/trade risk),Ridge (all features),4,16.198831281134595,3.8037015584500713,0.0001692234175257757
+LightGBM (all + geopolitical/trade risk),LightGBM (all features),4,-0.10436407955436433,-0.06487156179686236,0.9483147270977752

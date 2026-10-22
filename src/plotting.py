@@ -29,6 +29,8 @@ MODEL_COLORS = {
     "Ridge (fundamentals)": SERIES[1],
     "Ridge (all features)": SERIES[2],
     "LightGBM (all features)": SERIES[3],
+    "Ridge (all + geopolitical/trade risk)": SERIES[5],
+    "LightGBM (all + geopolitical/trade risk)": SERIES[6],
 }
 
 SECTOR_COLORS = {
