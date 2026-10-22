@@ -96,17 +96,22 @@ def _parse_company(label: str) -> tuple[str, str]:
 
 def fetch(first_year: int = FIRST_YEAR, last_year: int | None = None) -> pd.DataFrame:
     """Long table: state, company_id, eia_name, item, year, value."""
-    last_year = last_year or pd.Timestamp.today().year - 1
     headers = {"User-Agent": "Mozilla/5.0 (research; ne-gas-forecast)"}
+    last_year = last_year or latest_year(headers)
     rows = []
     y1 = first_year
+    codes = list(ITEMS)
+    batches = [codes[i:i + 12] for i in range(0, len(codes), 12)]   # service allows ~20 items
     while y1 <= last_year:          # the service is queried in 5-year chunks
         y2 = min(y1 + 4, last_year)
-        url = NGQS.format(y1=y1, y2=y2, items="/".join(ITEMS))
-        r = requests.get(url, headers=headers, timeout=120)
-        if r.status_code != 200:
-            raise RuntimeError(f"EIA NGQS request failed ({r.status_code}) for {y1}-{y2}")
-        for d in r.json().get("data", []):
+        data = []
+        for batch in batches:
+            url = NGQS.format(y1=y1, y2=y2, items="/".join(batch))
+            r = requests.get(url, headers=headers, timeout=120)
+            if r.status_code != 200:
+                raise RuntimeError(f"EIA NGQS request failed ({r.status_code}) for {y1}-{y2}")
+            data += r.json().get("data", [])
+        for d in data:
             state = STATE_NAMES.get(str(d.get("a", "")).strip())
             if not state:
                 continue
@@ -123,6 +128,17 @@ def fetch(first_year: int = FIRST_YEAR, last_year: int | None = None) -> pd.Data
     if df.empty:
         raise RuntimeError("EIA NGQS returned no New England rows")
     return df
+
+
+def latest_year(headers: dict | None = None) -> int:
+    """Latest Form 176 year EIA has published (usually two years back)."""
+    try:
+        r = requests.get("https://www.eia.gov/naturalgas/ngqs/data/report", headers=headers,
+                         timeout=60)
+        rep = next(x for x in r.json() if x.get("code") == "RP1")
+        return int(rep["maxYear"]["ayear"])
+    except Exception:
+        return pd.Timestamp.today().year - 2
 
 
 def _item_key(line, atype) -> str | None:
