@@ -110,8 +110,8 @@ if D is None:
     st.stop()
 
 m = D["meta"]
-tab_d, tab_ne, tab_t, tab_p, tab_m = st.tabs(
-    ["Massachusetts demand", "New England by state & company", "MA price per therm",
+tab_co, tab_ne, tab_d, tab_t, tab_p, tab_m = st.tabs(
+    ["Gas companies", "New England by state", "Massachusetts demand", "MA price per therm",
      "Henry Hub price", "Method"])
 
 # ------------------------------------------------------------------ demand
@@ -180,6 +180,220 @@ with tab_d:
                "Its trend shows structural change: efficiency, electrification, customer growth.")
 
 # ------------------------------------------------------------------ price
+# ------------------------------------------------------------------ Gas companies
+# Names used in the DPU GAF/LDAF files vs. the EIA company names
+TARIFF_NAME = {
+    "National Grid – Boston Gas": ["National Grid – Boston Gas", "National Grid – Colonial Gas"],
+    "Eversource – NSTAR Gas": ["NSTAR Gas (Eversource)"],
+    "Eversource Gas of MA": ["Eversource Gas of MA (fmr. Bay State/Columbia)"],
+    "Berkshire Gas": ["Berkshire Gas"],
+    "Liberty – Fall River/N. Attleboro": ["Liberty – Fall River/N. Attleboro"],
+    "Liberty – Blackstone": ["Liberty – Blackstone"],
+    "Unitil – Fitchburg Gas": ["Unitil – Fitchburg Gas"],
+}
+STATE_ORDER = ["MA", "CT", "RI", "NH", "ME", "VT"]
+STATE_COLOR = {s: SERIES[i] for i, s in enumerate(STATE_ORDER)}
+
+with tab_co:
+    ca, sh, cf = D["co_annual"], D["co_shares"], D["co_fc"]
+    if ca is None:
+        st.info("Company data appears after `python -m src.companies` and a pipeline run.")
+    else:
+        names = {k: v["name"] for k, v in config.STATES.items()}
+        last_y = int(ca["year"].max())
+        lat = ca[ca["year"] == last_y].copy()
+        lat["deliveries_bcf"] = lat["ldc_volume_mcf"] / 1e6
+        if cf is not None:
+            w = (cf[cf["month"].dt.month.isin(WINTER_M)].groupby(["state", "company"])[["normal", "cold"]]
+                 .sum() / 1000).reset_index()
+            lat = lat.merge(w, on=["state", "company"], how="left")
+        if sh is not None:
+            lat = lat.merge(sh[["state", "company", "share", "share_trend_pts"]],
+                            on=["state", "company"], how="left")
+        lat["label"] = lat["company"] + " (" + lat["state"] + ")"
+
+        st.markdown(f"#### {len(lat)} gas utilities across New England · EIA Form 176, {last_y}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Customers served", f"{lat['total_customers'].sum() / 1e6:,.2f} M")
+        c2.metric(f"Utility deliveries, {last_y}", f"{lat['deliveries_bcf'].sum():,.0f} Bcf")
+        if "normal" in lat:
+            c3.metric("Next-winter demand (normal)", f"{lat['normal'].sum():,.0f} Bcf",
+                      f"{(lat['cold'].sum() / lat['normal'].sum() - 1) * 100:+.1f}% if cold",
+                      delta_color="off")
+        wavg = (lat["res_price_per_therm"] * lat["res_sales_volume"]).sum() / lat.loc[
+            lat["res_price_per_therm"].notna(), "res_sales_volume"].sum()
+        c4.metric(f"Avg residential price, {last_y}", f"${wavg:.2f}/therm")
+
+        metric_opts = {
+            "Residential price ($/therm)": ("res_price_per_therm", "mean"),
+            "Customers": ("total_customers", "sum"),
+            f"Deliveries {last_y} (Bcf)": ("deliveries_bcf", "sum"),
+            "Next-winter demand, normal (Bcf)": ("normal", "sum"),
+        }
+        metric = st.radio("Map and chart metric", [k for k, v in metric_opts.items() if v[0] in lat],
+                          horizontal=True)
+        col, how = metric_opts[metric]
+
+        m1, m2 = st.columns([1, 1.25])
+        with m1:
+            if how == "mean":   # volume-weighted state average price
+                g = lat.dropna(subset=[col]).groupby("state").apply(
+                    lambda d: (d[col] * d["res_sales_volume"]).sum() / d["res_sales_volume"].sum(),
+                    include_groups=False)
+            else:
+                g = lat.groupby("state")[col].sum()
+            tops = (lat.sort_values("deliveries_bcf", ascending=False).groupby("state")["company"]
+                    .apply(lambda x: "<br>".join(x.head(4))))
+            fig = go.Figure(go.Choropleth(
+                locations=g.index, z=g.values, locationmode="USA-states",
+                colorscale=[[0, "#dbe8f8"], [1, "#184f95"]], marker_line_color=SURFACE,
+                marker_line_width=1.5, colorbar=dict(title="", thickness=10, len=0.6),
+                text=[f"<b>{names.get(s, s)}</b><br>{tops.get(s, '')}" for s in g.index],
+                hovertemplate="%{text}<br>" + metric + ": %{z:,.2f}<extra></extra>"))
+            fig.update_geos(fitbounds="locations", visible=False, bgcolor=SURFACE)
+            fig.update_layout(height=470, margin=dict(l=0, r=0, t=40, b=0), paper_bgcolor=SURFACE,
+                              title=dict(text=f"{metric} by state", x=0, font=dict(size=15, color=INK)))
+            st.plotly_chart(fig, width="stretch")
+        with m2:
+            tm = lat[lat["deliveries_bcf"] > 0]
+            fig = go.Figure(go.Treemap(
+                labels=[names.get(s, s) for s in STATE_ORDER if s in set(tm["state"])] + tm["label"].tolist(),
+                parents=[""] * tm["state"].nunique() + [names.get(s, s) for s in tm["state"]],
+                values=[tm.loc[tm["state"] == s, "deliveries_bcf"].sum() for s in STATE_ORDER
+                        if s in set(tm["state"])] + tm["deliveries_bcf"].tolist(),
+                branchvalues="total",
+                marker=dict(colors=[STATE_COLOR[s] for s in STATE_ORDER if s in set(tm["state"])]
+                            + [STATE_COLOR.get(s, NEUTRAL) for s in tm["state"]],
+                            line=dict(color=SURFACE, width=2)),
+                texttemplate="<b>%{label}</b><br>%{value:,.1f} Bcf<br>%{percentParent:.0%} of state",
+                hovertemplate="%{label}<br>%{value:,.1f} Bcf · %{percentParent:.1%} of state"
+                              "<extra></extra>"))
+            fig.update_layout(height=470, margin=dict(l=0, r=0, t=40, b=0), paper_bgcolor=SURFACE,
+                              title=dict(text=f"Who serves each state · utility deliveries {last_y}",
+                                         x=0, font=dict(size=15, color=INK)))
+            st.plotly_chart(fig, width="stretch")
+
+        # ranking chart for the chosen metric
+        r = lat.dropna(subset=[col]).sort_values(col)
+        fig = go.Figure(go.Bar(x=r[col], y=r["label"], orientation="h",
+                               marker=dict(color=[STATE_COLOR.get(s, NEUTRAL) for s in r["state"]]),
+                               hovertemplate="%{y}: %{x:,.2f}<extra></extra>"))
+        fig.update_layout(hovermode="closest")
+        fig = style(fig, f"{metric} by company (bar color = state)", "", max(380, 24 * len(r)))
+        fig.update_xaxes(showgrid=True, gridcolor=GRID)
+        fig.update_yaxes(showgrid=False)
+        st.plotly_chart(fig, width="stretch")
+
+        st.markdown("##### All companies")
+        tbl = lat.set_index("label")[[c for c in [
+            "share", "share_trend_pts", "normal", "cold", "deliveries_bcf", "total_customers",
+            "res_price_per_therm", "com_price_per_therm", "use_per_res_customer_therms",
+            "transport_share_pct", "unaccounted_pct"] if c in lat]].sort_values("deliveries_bcf",
+                                                                                 ascending=False)
+        tbl.columns = [{"share": "Share of state", "share_trend_pts": "Share chg 5y (pts)",
+                        "normal": "Winter Bcf (normal)", "cold": "Winter Bcf (cold)",
+                        "deliveries_bcf": f"Deliveries {last_y} (Bcf)",
+                        "total_customers": "Customers", "res_price_per_therm": "Res $/therm",
+                        "com_price_per_therm": "Com $/therm",
+                        "use_per_res_customer_therms": "Therms/home",
+                        "transport_share_pct": "Choice share %", "unaccounted_pct": "UAF %"}[c]
+                       for c in tbl.columns]
+        tbl.index.name = "Company (state)"
+        fmt = {"Share of state": "{:.1%}", "Share chg 5y (pts)": "{:+.1f}", "Winter Bcf (normal)": "{:,.2f}",
+               "Winter Bcf (cold)": "{:,.2f}", f"Deliveries {last_y} (Bcf)": "{:,.2f}",
+               "Customers": "{:,.0f}", "Res $/therm": "${:.2f}", "Com $/therm": "${:.2f}",
+               "Therms/home": "{:,.0f}", "Choice share %": "{:.0f}", "UAF %": "{:+.1f}"}
+        st.dataframe(tbl.style.format(fmt, na_rep="–"), width="stretch", height=420)
+        st.caption("Share of state = average share of state utility deliveries, latest 3 years; winter = "
+                   "Nov–Mar forecast from the state model split by share. Prices = sales revenue ÷ sales "
+                   "volume (supply, delivery and fixed charges together). Choice share = gas delivered for "
+                   "customers who buy supply from a marketer. UAF = unaccounted-for gas as % of supply.")
+
+        # ---------------- company deep dive ----------------
+        st.divider()
+        st.markdown("### Company deep dive")
+        opts = lat.sort_values(["state", "deliveries_bcf"], ascending=[True, False])["label"].tolist()
+        default = next((i for i, o in enumerate(opts) if o.startswith("National Grid – Boston Gas")), 0)
+        pick = st.selectbox("Company", opts, index=default)
+        row = lat[lat["label"] == pick].iloc[0]
+        co, stt = row["company"], row["state"]
+        hist = ca[(ca["company"] == co) & (ca["state"] == stt)].set_index("year")
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.metric("Share of state utility load", f"{row.get('share', np.nan):.1%}"
+                  if pd.notna(row.get("share")) else "–",
+                  f"{row.get('share_trend_pts', 0):+.1f} pts in 5 yrs" if pd.notna(row.get("share_trend_pts"))
+                  else None, delta_color="off")
+        k2.metric(f"Customers ({last_y})", f"{row['total_customers']:,.0f}")
+        k3.metric(f"Residential price ({last_y})", f"${row['res_price_per_therm']:.2f}/therm"
+                  if pd.notna(row["res_price_per_therm"]) else "–")
+        if "normal" in row and pd.notna(row["normal"]):
+            k4.metric("Next-winter demand", f"{row['normal']:,.1f} Bcf",
+                      f"{row['cold']:,.1f} Bcf if cold", delta_color="off")
+
+        d1, d2 = st.columns(2)
+        with d1:
+            if cf is not None:
+                f = cf[(cf["company"] == co) & (cf["state"] == stt)].set_index("month")
+                fig = go.Figure()
+                if "lo90" in f:
+                    fig.add_trace(go.Scatter(x=list(f.index) + list(f.index[::-1]),
+                                             y=list(f["hi90"] / 1000) + list(f["lo90"][::-1] / 1000),
+                                             fill="toself", fillcolor="rgba(42,120,214,0.15)",
+                                             line=dict(width=0), name="90% interval", hoverinfo="skip"))
+                for s_, dash in (("cold", "dash"), ("normal", "solid"), ("warm", "dash")):
+                    fig.add_trace(go.Scatter(x=f.index, y=f[s_] / 1000, name=f"{s_.title()} weather",
+                                             line=dict(color=SCENARIO_COLORS[s_], dash=dash,
+                                                       width=2.5 if s_ == "normal" else 1.8)))
+                fig = style(fig, "12-month demand forecast", "Bcf per month", 420)
+                fig.update_layout(legend=dict(orientation="h", y=-0.15, yanchor="top", x=0),
+                                  margin=dict(b=90))
+                st.plotly_chart(fig, width="stretch")
+        with d2:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=hist.index, y=hist["res_price_per_therm"], name="Residential",
+                                     mode="lines+markers", line=dict(color=SERIES[0], width=2)))
+            fig.add_trace(go.Scatter(x=hist.index, y=hist["com_price_per_therm"], name="Commercial",
+                                     mode="lines+markers", line=dict(color=SERIES[1], width=2)))
+            hh = D["hh_therm"]
+            if hh is not None:
+                hy = hh["henry_hub_therm"].groupby(hh.index.year).mean().reindex(hist.index)
+                fig.add_trace(go.Scatter(x=hy.index, y=hy, name="Henry Hub (wholesale)",
+                                         line=dict(color=NEUTRAL, dash="dot", width=2)))
+            fig = style(fig, "Average price per therm", "$/therm", 420)
+            fig.update_layout(legend=dict(orientation="h", y=-0.15, yanchor="top", x=0),
+                              margin=dict(b=90))
+            st.plotly_chart(fig, width="stretch")
+
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=hist.index, y=hist["citygate_sales_volume"] / 1e6,
+                             name="Supply: bought for sales customers", marker=dict(color=SERIES[0])))
+        fig.add_trace(go.Bar(x=hist.index, y=hist["citygate_transport_volume"] / 1e6,
+                             name="Supply: delivered for choice customers", marker=dict(color=SERIES[2])))
+        fig.add_trace(go.Bar(x=hist.index, y=hist["lng_withdrawals"] / 1e6, name="Supply: LNG withdrawals",
+                             marker=dict(color=SERIES[3])))
+        fig.add_trace(go.Scatter(x=hist.index, y=hist["ldc_volume_mcf"] / 1e6, name="Demand: deliveries",
+                                 mode="lines+markers", line=dict(color=INK, width=2.5)))
+        fig.update_layout(barmode="stack")
+        st.plotly_chart(style(fig, "Annual supply vs. customer deliveries", "Bcf per year", 420),
+                        width="stretch")
+
+        tf = D["tariff"]
+        if stt == "MA" and tf is not None and co in TARIFF_NAME:
+            t = tf[(tf["company"].isin(TARIFF_NAME[co])) & (tf["category"] == "Residential heating")]
+            if len(t):
+                t = t.groupby("month")[["gaf_therm", "ldaf_therm"]].mean().iloc[-48:]
+                fig = go.Figure()
+                fig.add_trace(go.Bar(x=t.index, y=t["gaf_therm"], name="GAF (supply)",
+                                     marker=dict(color=SERIES[0])))
+                fig.add_trace(go.Bar(x=t.index, y=t["ldaf_therm"], name="LDAF (delivery adjustments)",
+                                     marker=dict(color=SERIES[1])))
+                fig.update_layout(barmode="relative", bargap=0.15)
+                st.plotly_chart(style(fig, "Residential heating GAF + LDAF in force each month (DPU)",
+                                      "$/therm", 400), width="stretch")
+                st.caption("Massachusetts only. Full breakdown by rate class in the **MA price per "
+                           "therm** tab.")
+
 # ------------------------------------------------------------------ New England
 with tab_ne:
     rf, rs, rh = D["region_fc"], D["region_sc"], D["region_hist"]
@@ -218,87 +432,8 @@ with tab_ne:
         st.plotly_chart(scenario_chart(hs, fs, f"{names[state]} utility gas demand · {fs['model'].iloc[0]}"),
                         width="stretch")
 
-        st.subheader(f"{names[state]} by gas company")
-        cf, sh, ca = D["co_fc"], D["co_shares"], D["co_annual"]
-        if cf is None or ca is None:
-            st.info("Company breakdown appears after the pipeline downloads EIA Form 176 company "
-                    "data (`python -m src.companies`).")
-        else:
-            cas = ca[ca["state"] == state]
-            last_y = int(cas["year"].max())
-            lat = cas[cas["year"] == last_y].set_index("company")
-            shs = sh[sh["state"] == state].set_index("company")
-            cfs = cf[cf["state"] == state]
-            wins = (cfs[cfs["month"].dt.month.isin(WINTER_M)].groupby("company")[["normal", "cold"]]
-                    .sum() / 1000)
-            tbl = pd.DataFrame({
-                "Share of state utility load": shs["share"],
-                "Share change, 5 yrs (pts)": shs["share_trend_pts"],
-                "Winter Bcf, normal": wins["normal"],
-                "Winter Bcf, cold": wins["cold"],
-                f"Customers ({last_y})": lat["total_customers"],
-                f"Residential $/therm ({last_y})": lat["res_price_per_therm"],
-                f"Commercial $/therm ({last_y})": lat["com_price_per_therm"],
-                "Therms per home": lat["use_per_res_customer_therms"],
-                "Transport (choice) share of supply %": lat["transport_share_pct"],
-                "Unaccounted-for gas %": lat["unaccounted_pct"],
-            }).sort_values("Share of state utility load", ascending=False)
-            st.dataframe(tbl.style.format({
-                "Share of state utility load": "{:.1%}", "Share change, 5 yrs (pts)": "{:+.1f}",
-                "Winter Bcf, normal": "{:,.2f}", "Winter Bcf, cold": "{:,.2f}",
-                f"Customers ({last_y})": "{:,.0f}", f"Residential $/therm ({last_y})": "${:.2f}",
-                f"Commercial $/therm ({last_y})": "${:.2f}", "Therms per home": "{:,.0f}",
-                "Transport (choice) share of supply %": "{:.0f}", "Unaccounted-for gas %": "{:+.1f}",
-            }, na_rep="–"), width="stretch")
-            st.caption("EIA Form 176 annual company reports. Shares are the latest three years' average "
-                       "of residential + commercial + industrial deliveries; company forecasts apply "
-                       "them to the state's monthly forecast. Prices are sales revenue ÷ sales volume "
-                       "(supply, delivery and fixed charges together), converted with each company's "
-                       "reported heat content.")
-
-            order = tbl.index.tolist()
-            colors = {c: SERIES[i % len(SERIES)] for i, c in enumerate(order)}
-            a1, a2 = st.columns(2)
-            with a1:
-                fig = go.Figure()
-                for c in order:
-                    d = cfs[cfs["company"] == c]
-                    fig.add_trace(go.Scatter(x=d["month"], y=d["normal"] / 1000, name=c,
-                                             line=dict(color=colors[c], width=2)))
-                fig = style(fig, "12-month demand forecast by company (normal weather)",
-                            "Bcf per month", 480)
-                fig.update_layout(legend=dict(orientation="h", y=-0.18, yanchor="top", x=0),
-                                  margin=dict(b=110))
-                st.plotly_chart(fig, width="stretch")
-            with a2:
-                fig = go.Figure()
-                for c in order:
-                    d = cas[cas["company"] == c]
-                    fig.add_trace(go.Scatter(x=d["year"], y=d["res_price_per_therm"], name=c,
-                                             mode="lines+markers", line=dict(color=colors[c], width=2),
-                                             marker=dict(size=6)))
-                fig = style(fig, "Average residential price by company", "$/therm", 480)
-                fig.update_layout(legend=dict(orientation="h", y=-0.18, yanchor="top", x=0),
-                                  margin=dict(b=110))
-                st.plotly_chart(fig, width="stretch")
-
-            co_sel = st.selectbox("Company detail", order)
-            d = cas[cas["company"] == co_sel].set_index("year")
-            fig = go.Figure()
-            fig.add_trace(go.Bar(x=d.index, y=d["citygate_sales_volume"] / 1e6,
-                                 name="Supply: citygate, sales customers", marker=dict(color=SERIES[0])))
-            fig.add_trace(go.Bar(x=d.index, y=d["citygate_transport_volume"] / 1e6,
-                                 name="Supply: citygate, transport customers", marker=dict(color=SERIES[2])))
-            fig.add_trace(go.Bar(x=d.index, y=d["lng_withdrawals"] / 1e6,
-                                 name="Supply: LNG withdrawals", marker=dict(color=SERIES[3])))
-            fig.add_trace(go.Scatter(x=d.index, y=d["ldc_volume_mcf"] / 1e6, name="Demand: deliveries",
-                                     mode="lines+markers", line=dict(color=INK, width=2.5)))
-            fig.update_layout(barmode="stack")
-            st.plotly_chart(style(fig, f"{co_sel}: annual supply vs. customer deliveries", "Bcf per year",
-                                  440), width="stretch")
-            st.caption("Supply = gas received at the citygate (bought for sales customers, or "
-                       "delivered for customers who buy from marketers) plus LNG withdrawals. "
-                       "The gap to deliveries is storage, company use, losses and unaccounted-for gas.")
+        st.caption("See the **Gas companies** tab for each utility's share of this forecast, "
+                   "supply, customers and prices.")
 
 # ------------------------------------------------------------------ MA tariffs
 with tab_t:
