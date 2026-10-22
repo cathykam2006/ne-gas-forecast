@@ -1,6 +1,8 @@
 # Full pipeline: data pull, models, notebooks, tests
 -r requirements.txt
 requests>=2.32
+beautifulsoup4>=4.12   # DPU rates page
+openpyxl>=3.1         # DPU historical GAF/LDAF workbook
 scipy>=1.14
 scikit-learn>=1.6
 statsmodels>=0.14

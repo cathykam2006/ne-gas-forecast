@@ -4,7 +4,7 @@ Forecasts **New England utility gas demand by state and company**, breaks down *
 
 **App tabs:** Gas companies (map, treemap, leaderboard and deep dive for every New England utility) · New England by state · Massachusetts demand · MA price per therm (GAF/LDAF) · Henry Hub price · Method
 
-**Live app:** https://ne-gas-forecast-zmi45pfx6pdyncuxxazxcq.streamlit.app/ · **Author:** Cathy Kam
+**Live app:** _add your Streamlit link here_ · **Author:** Cathy Kam
 
 ---
 
