@@ -239,7 +239,9 @@ def run(region_fc: pd.DataFrame | None = None, fetch_data: bool = False) -> pd.D
             download()
         except Exception as e:
             print(f"  company download failed: {e}")
-            return None
+            if not raw_path.exists():
+                return None
+            print("  using the previously saved company file")
     raw = pd.read_csv(raw_path)
     t = company_table(raw)
     out = config.PROCESSED_DIR

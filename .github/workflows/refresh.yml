@@ -1,6 +1,7 @@
 # Weekly refresh: pull new EIA, weather, DPU GAF/LDAF and company data, rerun
 # backtests and forecasts,
-# commit data/processed/ so the Streamlit app updates itself.
+# commit data/ so the Streamlit app updates and the next run starts from
+# the saved history (weather is then refreshed incrementally).
 # Setup: repo Settings -> Secrets and variables -> Actions -> New secret EIA_API_KEY
 name: Weekly data refresh
 
@@ -31,6 +32,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/processed
+          git add data/raw data/processed
           git diff --cached --quiet || git commit -m "Weekly data refresh"
           git push

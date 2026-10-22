@@ -199,3 +199,24 @@ def test_company_pipeline(monkeypatch):
                        "normal": [100.0, 200.0]})
     cf = companies.company_forecasts(fc, sh)
     assert np.isclose(cf.groupby("month")["normal"].sum().values, [100, 200]).all()
+
+
+def test_weather_updates_incrementally(tmp_path, monkeypatch):
+    from src import data
+    calls = []
+
+    def fake_wdd(stations, start=None, end=None):
+        calls.append(start)
+        idx = pd.date_range(start or "2001-01-01", "2026-10-15", freq="D")
+        return pd.DataFrame({"tmean": 40.0, "hdd": 25.0, "cdd": 0.0}, index=idx)
+
+    monkeypatch.setattr(data, "weighted_degree_days", fake_wdd)
+    f = tmp_path / "w.csv"
+    old = pd.DataFrame({"tmean": 50.0, "hdd": 15.0, "cdd": 0.0},
+                       index=pd.Index(pd.date_range("2001-01-01", "2026-09-30", freq="D"), name="date"))
+    old.to_csv(f)
+    data.update_weather({}, f)
+    out = pd.read_csv(f, index_col=0, parse_dates=True)
+    assert calls == ["2026-08-01"]                       # only the recent window
+    assert out.index.min() == pd.Timestamp("2001-01-01") and out.index.is_unique
+    assert out.loc["2020-01-01", "hdd"] == 15.0 and out.loc["2026-10-15", "hdd"] == 25.0

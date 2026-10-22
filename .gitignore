@@ -3,6 +3,5 @@ __pycache__/
 .ipynb_checkpoints/
 .env
 .streamlit/secrets.toml
-data/raw/
 .venv/
 .DS_Store

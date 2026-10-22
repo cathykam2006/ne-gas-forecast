@@ -41,9 +41,17 @@ def _get_api_key(api_key: str | None = None) -> str:
     return key
 
 
-def _request(url: str, params: dict, retries: int = 4) -> dict:
+def _request(url: str, params: dict, retries: int = 5) -> dict:
     for attempt in range(retries):
-        resp = requests.get(url, params=params, timeout=60)
+        try:
+            resp = requests.get(url, params=params, timeout=120)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            if attempt == retries - 1:
+                raise
+            wait = 20 * (attempt + 1)
+            print(f"  network timeout ({type(e).__name__}), retrying in {wait}s ...")
+            time.sleep(wait)
+            continue
         if resp.status_code == 200:
             return resp.json()
         if resp.status_code == 429 and attempt < retries - 1:
@@ -52,7 +60,7 @@ def _request(url: str, params: dict, retries: int = 4) -> dict:
             time.sleep(65)
             continue
         if resp.status_code in (500, 502, 503, 504) and attempt < retries - 1:
-            time.sleep(2 ** attempt)
+            time.sleep(10 * (attempt + 1))
             continue
         raise RuntimeError(f"Request failed ({resp.status_code}): {resp.text[:300]}")
     raise RuntimeError("Request failed after retries")
@@ -126,7 +134,7 @@ def pull_states(api_key: str | None = None, only_missing: bool = False) -> None:
             continue
         print(f"Pulling {meta['name']} consumption and weather ...")
         fetch_state_consumption(state, api_key).to_csv(cons_f)
-        weighted_degree_days(meta["stations"]).to_csv(wx_f)
+        update_weather(meta["stations"], wx_f)
 
 
 def fetch_market_data(api_key: str | None = None) -> dict[str, pd.Series]:
@@ -176,6 +184,27 @@ def weighted_degree_days(stations: dict, start: str = config.START_DATE,
     return out.dropna()
 
 
+def update_weather(stations: dict, path, overlap_days: int = 60) -> None:
+    """Refresh a weather file incrementally.
+
+    If the file exists, only the last `overlap_days` plus new days are
+    downloaded (ERA5 revises the most recent days slightly), instead of 25
+    years for every station. A weekly refresh is then a few small requests.
+    """
+    from pathlib import Path
+
+    path = Path(path)
+    if path.exists():
+        old = pd.read_csv(path, index_col=0, parse_dates=True)
+        start = (old.index.max() - pd.Timedelta(days=overlap_days)).date().isoformat()
+        new = weighted_degree_days(stations, start=start)
+        merged = pd.concat([old[old.index < new.index.min()], new])
+    else:
+        merged = weighted_degree_days(stations)
+    merged.index.name = "date"
+    merged.to_csv(path)
+
+
 # --------------------------------------------------------------------------
 # Orchestration
 # --------------------------------------------------------------------------
@@ -190,7 +219,7 @@ def pull_all(api_key: str | None = None) -> None:
             config.RAW_DIR / f"{name}.csv")
 
     print("Pulling US weather proxy ...")
-    weighted_degree_days(config.US_WEATHER_STATIONS).to_csv(config.RAW_DIR / "weather_us.csv")
+    update_weather(config.US_WEATHER_STATIONS, config.RAW_DIR / "weather_us.csv")
     print(f"Done. Raw files in {config.RAW_DIR}")
 
 
