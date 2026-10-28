@@ -470,12 +470,6 @@ with tab_t:
             st.caption(f"Henry Hub, {hh_now.index[-1]:%B %Y} average: ${hh_now.iloc[-1]:.3f}/therm. "
                        "GAF and LDAF are per-therm adjustments only; customer charges and base "
                        "distribution rates (set in each company's rate case) are billed on top.")
-        ws = D["nx_meta"].get("nymex_winter_strip")
-        if ws:
-            st.info(f"**NYMEX peak-period strip, {ws['label']}: ${ws['therm']:.3f}/therm** "
-                    f"(${ws['mmbtu']:.3f}/MMBtu, average of the monthly Henry Hub futures, as of "
-                    f"{pd.Timestamp(D['nx_meta']['nymex_strip_as_of']):%b %d, %Y}). This is the market price of the "
-                    "commodity behind the coming peak GAF, before pipeline, storage and delivery costs to New England.")
 
         companies = sorted(cur["company"])
         co = st.selectbox("Company", companies,
