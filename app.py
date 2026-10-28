@@ -68,17 +68,45 @@ def load(stamp: float):
     }
 
 
+LEGEND_WIDTH = 620   # px a legend row is assumed to have (narrow screens); wider screens just get spare room
+LEGEND_ROW = 22      # px per legend row
+
+
+def legend_rows(fig) -> int:
+    """How many rows a horizontal legend needs at LEGEND_WIDTH (over- rather than under-estimated)."""
+    names = [t.name for t in fig.data if t.name and t.showlegend is not False]
+    rows, used = (1 if names else 0), 0
+    for n in names:
+        w = 8 * len(n) + 50                                          # text + swatch + gap
+        if used and used + w > LEGEND_WIDTH:
+            rows, used = rows + 1, 0
+        used += w
+    return rows
+
+
+def legend_below(fig):
+    """Pin the legend to the bottom edge of the chart and reserve exactly enough room for it,
+    so it never covers the title (above) or the x-axis dates (below the plot)."""
+    rows = legend_rows(fig)
+    axis = 30 + (22 if fig.layout.xaxis.title.text else 0)      # tick labels (+ axis title)
+    fig.update_layout(
+        legend=dict(orientation="h", x=0, xanchor="left", yref="container", y=0, yanchor="bottom",
+                    font=dict(color=INK_2)),
+        margin=dict(b=axis + rows * LEGEND_ROW + 8))
+    return fig
+
+
 def style(fig, title, ytitle, height=400):
     fig.update_layout(
         title=dict(text=title, x=0, font=dict(size=16, color=INK)),
         plot_bgcolor=SURFACE, paper_bgcolor=SURFACE, height=height,
         margin=dict(l=10, r=10, t=60, b=10), hovermode="x unified",
-        legend=dict(orientation="h", y=1.02, x=0, yanchor="bottom", font=dict(color=INK_2)),
         font=dict(color=INK_2),
     )
     fig.update_yaxes(title=ytitle, gridcolor=GRID, zeroline=False)
     fig.update_xaxes(showgrid=False, linecolor=GRID)
-    return fig
+    # Legend below the plot: above it, a legend that wraps onto 2+ lines covers the title.
+    return legend_below(fig)
 
 
 def add_events(fig, start):
@@ -87,8 +115,10 @@ def add_events(fig, start):
         d = pd.Timestamp(d)
         if d >= start:
             fig.add_vline(x=d, line=dict(color=INK_2, width=1, dash="dot"))
+            # background box keeps the label readable where it crosses a price line
             fig.add_annotation(x=d, y=1, yref="paper", text=label, showarrow=False,
                                textangle=-90, xanchor="right", yanchor="top",
+                               bgcolor=SURFACE, opacity=0.95, borderpad=1,
                                font=dict(size=10, color=INK_2))
 
 
@@ -178,8 +208,6 @@ with tab_d:
                                      marker=dict(size=7)))
         fig.update_xaxes(title="Months ahead")
         fig = style(fig, "Error by horizon", "MAPE (%)", 460)
-        fig.update_layout(legend=dict(orientation="h", y=-0.22, yanchor="top", x=0),
-                          margin=dict(b=90))
         st.plotly_chart(fig, width="stretch")
 
     wn = D["wn"]
@@ -360,8 +388,6 @@ with tab_co:
                                              line=dict(color=SCENARIO_COLORS[s_], dash=dash,
                                                        width=2.5 if s_ == "normal" else 1.8)))
                 fig = style(fig, "12-month demand forecast", "Bcf per month", 420)
-                fig.update_layout(legend=dict(orientation="h", y=-0.15, yanchor="top", x=0),
-                                  margin=dict(b=90))
                 st.plotly_chart(fig, width="stretch")
         with d2:
             fig = go.Figure()
@@ -375,8 +401,6 @@ with tab_co:
                 fig.add_trace(go.Scatter(x=hy.index, y=hy, name="Henry Hub (wholesale)",
                                          line=dict(color=NEUTRAL, dash="dot", width=2)))
             fig = style(fig, "Average price per therm", "$/therm", 420)
-            fig.update_layout(legend=dict(orientation="h", y=-0.15, yanchor="top", x=0),
-                              margin=dict(b=90))
             st.plotly_chart(fig, width="stretch")
 
         fig = go.Figure()
