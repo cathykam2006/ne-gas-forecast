@@ -42,8 +42,8 @@ Backtests on data through July 2026 (demand) and October 2026 (price):
 | Data | Source | Frequency |
 |---|---|---|
 | MA deliveries to consumers by end use (MMcf) | EIA API v2 (`N3060MA2`, `N3010MA2`, `N3020MA2`, `N3035MA2`, `N3045MA2`) | Monthly |
-| Henry Hub spot (\$/MMBtu) | EIA API v2 (`RNGWHHD`) | Daily |
-| NYMEX Henry Hub futures: front month and the futures price for each of the next 24 delivery months (\$/MMBtu) | CME NYMEX contracts via Yahoo Finance (`NG=F`, `NG<month><yy>.NYM`); EIA stopped publishing futures after April 5, 2024 | Daily (weekdays) |
+| Henry Hub spot (<span>$</span>/MMBtu) | EIA API v2 (`RNGWHHD`) | Daily |
+| NYMEX Henry Hub futures: front month and the futures price for each of the next 24 delivery months (<span>$</span>/MMBtu) | CME NYMEX contracts via Yahoo Finance (`NG=F`, `NG<month><yy>.NYM`); EIA stopped publishing futures after April 5, 2024 | Daily (weekdays) |
 | Working gas in storage, Lower 48 / East (Bcf) | EIA Weekly Natural Gas Storage Report | Weekly |
 | U.S. LNG exports (MMcf) | EIA API v2 (`N9133US2`) | Monthly |
 | Daily max/min temperature | Open-Meteo ERA5 archive (no key) | Daily |
@@ -74,7 +74,7 @@ Walk-forward evaluation with quarterly refits. Every challenger is compared to t
 
 ### NYMEX futures
 `src/nymex.py` keeps the front-month history (2001 onward) and a dated daily history of the futures price for each delivery month (the "forward strip"). Updates are incremental and checked before anything is saved:
-- prices outside \$0.50–\$50/MMBtu are rejected, and a feed that is mostly implausible fails;
+- prices outside <span>$</span>0.50–<span>$</span>50/MMBtu are rejected, and a feed that is mostly implausible fails;
 - contracts are dropped once they stop trading (three business days before the delivery month);
 - quotes without a settlement in the past week are rejected;
 - a failed download never overwrites good history.
@@ -92,7 +92,7 @@ Predecessor filings are merged into successors (Colonial → Boston Gas, Columbi
 - **GAF** (Gas Adjustment Factor) recovers gas supply, interstate transportation and storage costs dollar-for-dollar; set per peak/off-peak season with mid-season revisions.
 - **LDAF** (Local Distribution Adjustment Factor) recovers distribution program costs (energy efficiency from 2025/26, GSEP pipe replacement, environmental response, residential assistance and others).
 
-`src/tariffs.py` parses the DPU's current-rates page and historical workbook (6,700+ filed rates, 170 revisions, May 2008 onward) into monthly \$/therm factors for each company and rate category (residential heating/non-heating, small/medium/large C&I), maps predecessor names (Bay State/Columbia → Eversource Gas of MA; KeySpan → National Grid; New England Gas → Liberty), converts \$/Ccf rates to \$/therm, and compares GAF with the Henry Hub price. Base distribution rates and customer charges are set in rate cases and are not included.
+`src/tariffs.py` parses the DPU's current-rates page and historical workbook (6,700+ filed rates, 170 revisions, May 2008 onward) into monthly <span>$</span>/therm factors for each company and rate category (residential heating/non-heating, small/medium/large C&I), maps predecessor names (Bay State/Columbia → Eversource Gas of MA; KeySpan → National Grid; New England Gas → Liberty), converts <span>$</span>/Ccf rates to <span>$</span>/therm, and compares GAF with the Henry Hub price. Base distribution rates and customer charges are set in rate cases and are not included.
 
 ### Leakage controls (unit-tested in `tests/`)
 - Storage enters with a one-week lag (the report for week *t* is released the following Thursday).
