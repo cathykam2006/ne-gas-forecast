@@ -76,7 +76,26 @@ EVENTS = [
     ("2022-02-24", "Russia invades Ukraine"),
     ("2022-06-08", "Freeport LNG outage"),
     ("2025-02-10", "China 15% tariff on US LNG"),
+    ("2026-01-24", "Winter Storm Fern"),
+    ("2026-04-22", "Golden Pass LNG first cargo"),
 ]
+
+# Events that span weeks: (start, end, label). Drawn as shaded bands.
+EVENT_PERIODS = [
+    ("2026-01-24", "2026-01-26", "Winter Storm Fern"),
+    ("2026-07-01", "2026-07-31", "Record-hot July"),
+]
+
+# One-line context shown under the chart (sources: EIA Today in Energy, NOAA via EIA).
+EVENT_NOTES = {
+    "Winter Storm Fern": "Jan 24–26, 2026: Arctic storm across the eastern two-thirds of the U.S.; production "
+                         "freeze-offs and record heating demand sent Henry Hub spot above $30/MMBtu on Jan 23.",
+    "Golden Pass LNG first cargo": "Apr 22, 2026: the 10th U.S. LNG export terminal (Texas) shipped its first "
+                                   "cargo, adding Gulf Coast export demand.",
+    "Record-hot July": "July 2026: warmest July on record for the Lower 48 (NOAA); power-sector gas burn rose, "
+                       "but record production kept summer prices near $3.",
+    "China 15% tariff on US LNG": "Feb 10, 2025: China's retaliatory tariff on U.S. LNG took effect.",
+}
 
 # --- Demand model settings (chosen by backtest; see notebook 03) ----------
 # "ldc" = residential + commercial + industrial: the load gas utilities serve.

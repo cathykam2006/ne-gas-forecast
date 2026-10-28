@@ -109,6 +109,27 @@ def style(fig, title, ytitle, height=400):
     return legend_below(fig)
 
 
+def add_events_detailed(fig, start, end):
+    """Events inside [start, end] with horizontal labels (for a one-year view): dotted line for a
+    one-day event, shaded band for one that lasts weeks. Labels alternate between two heights so
+    neighbouring ones don't collide. Returns the labels shown, for the notes under the chart."""
+    periods = {lab: (pd.Timestamp(a), pd.Timestamp(b)) for a, b, lab in config.EVENT_PERIODS}
+    items = [(pd.Timestamp(d), lab) for d, lab in config.EVENTS if lab not in periods]
+    items += [(a, lab) for lab, (a, b) in periods.items()]
+    shown = []
+    for i, (d, lab) in enumerate(sorted(x for x in items if start <= x[0] <= end)):
+        if lab in periods and (periods[lab][1] - periods[lab][0]).days >= 7:
+            fig.add_vrect(x0=periods[lab][0], x1=periods[lab][1], fillcolor=SERIES[1], opacity=0.10,
+                          line_width=0, layer="below")
+        else:
+            fig.add_vline(x=d, line=dict(color=INK_2, width=1, dash="dot"))
+        fig.add_annotation(x=d, y=1.0 if i % 2 == 0 else 0.90, yref="paper", text=f"<b>{lab}</b>",
+                           showarrow=False, xanchor="left", yanchor="top", xshift=4,
+                           bgcolor=SURFACE, opacity=0.95, borderpad=2, font=dict(size=11, color=INK))
+        shown.append(lab)
+    return shown
+
+
 def add_events(fig, start):
     """Dotted markers for major market events (context only, not model inputs)."""
     for d, label in config.EVENTS:
@@ -574,21 +595,51 @@ with tab_p:
                   help="The futures market's forecast: the front-month NYMEX price at the end of each week, "
                        "scored on the same weeks as the models.")
 
+    # Plot every forecast at the week it was FOR (made h weeks earlier), next to the price that week.
+    shift = pd.Timedelta(weeks=h)
     g = wf[wf["model"] == best_p].set_index("date")
     rw = wf[wf["model"] == "Random walk"].set_index("date")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=rw.index, y=rw["price_actual"], name=f"Actual ({h} wk later)",
-                             line=dict(color=NEUTRAL, width=1.5)))
-    fig.add_trace(go.Scatter(x=g.index, y=g["price_fcst"], name=f"{best_p} forecast",
-                             line=dict(color=MODEL_COLORS.get(best_p, SERIES[0]), width=1.5)))
     mk = wf[wf["model"] == MARKET].set_index("date")
+    view = st.radio("Period shown", ["Latest 12 months", "Full history (since 2020)"], horizontal=True,
+                    key="fc_view")
+    end = rw.index.max() + shift
+    start = end - pd.DateOffset(months=12) if view.startswith("Latest") else rw.index.min() + shift
+    win = lambda df: df[(df.index + shift >= start)]
+    fig = go.Figure()
+    recent = view.startswith("Latest")
+    fig.add_trace(go.Scatter(x=win(rw).index + shift, y=win(rw)["price_actual"], name="Actual price (weekly avg.)",
+                             mode="lines+markers" if recent else "lines",
+                             line=dict(color=NEUTRAL, width=2 if recent else 1.5), marker=dict(size=5)))
+    fig.add_trace(go.Scatter(x=win(g).index + shift, y=win(g)["price_fcst"],
+                             name=f"{best_p} forecast, made {h} wk earlier",
+                             mode="lines+markers" if recent else "lines",
+                             line=dict(color=MODEL_COLORS.get(best_p, SERIES[0]), width=2 if recent else 1.5),
+                             marker=dict(size=5)))
     if len(mk):
-        fig.add_trace(go.Scatter(x=mk.index, y=mk["price_fcst"], name="NYMEX futures (market)",
+        fig.add_trace(go.Scatter(x=win(mk).index + shift, y=win(mk)["price_fcst"],
+                                 name=f"NYMEX futures, {h} wk earlier (market)",
                                  line=dict(color=MODEL_COLORS.get(MARKET, INK_2), width=1.2, dash="dot"),
                                  visible="legendonly"))
-    add_events(fig, g.index.min())
-    st.plotly_chart(style(fig, f"Out-of-sample {h}-week-ahead forecasts", "$/MMBtu"),
-                    width="stretch")
+    if recent:
+        shown = add_events_detailed(fig, start, end)
+        title = f"Henry Hub {h}-week-ahead forecasts vs. actual, {start:%b %Y}–{end:%b %Y}"
+    else:
+        shown = []
+        add_events(fig, start)
+        title = f"Henry Hub {h}-week-ahead forecasts vs. actual, since {start:%Y}"
+    fig = style(fig, title, "$/MMBtu", 460 if recent else 400)
+    if recent:
+        fig.update_xaxes(dtick="M1", tickformat="%b<br>%Y", ticklabelmode="period",
+                         showgrid=True, gridcolor=GRID, range=[start, end + pd.Timedelta(days=3)])
+    fig.update_layout(margin=dict(t=70))
+    st.plotly_chart(fig, width="stretch")
+    note = (f"Each point is the week the forecast was for: the blue line is what the model predicted {h} "
+            f"week{'s' if h > 1 else ''} earlier, the grey line is the Henry Hub spot price that week. "
+            "Events are context only; they are not model inputs.")
+    if shown:
+        note += "  \n" + "  \n".join(f"**{lab}**: {config.EVENT_NOTES[lab]}" for lab in shown
+                                         if lab in config.EVENT_NOTES)
+    st.caption(note.replace("$", "\\$"))
 
     a, b = st.columns([1.2, 1])
     with a:
