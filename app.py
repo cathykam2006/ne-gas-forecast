@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src import config
+from src.nymex import MARKET
 from src.plotting import (GRID, INK, INK_2, MODEL_COLORS, NEUTRAL, SCENARIO_COLORS,
                           SERIES, SURFACE)
 
@@ -20,8 +21,14 @@ P = config.PROCESSED_DIR
 
 
 # ------------------------------------------------------------------ data
-@st.cache_data
-def load():
+def data_stamp() -> float:
+    """Latest change to any processed file. The cache below is keyed on it, so a refresh that
+    commits new data shows up on the next page load instead of after an app restart."""
+    return max((f.stat().st_mtime for f in P.glob("*") if f.is_file()), default=0.0)
+
+
+@st.cache_data(max_entries=2)
+def load(stamp: float):
     if not (P / "meta.json").exists():
         return None
     r = lambda f, **k: pd.read_csv(P / f, **k)
@@ -52,6 +59,12 @@ def load():
         "co_shares": opt("company_shares.csv"),
         "co_price": opt("company_prices.csv"),
         "co_annual": opt("company_annual.csv"),
+        # NYMEX futures (updated every weekday by .github/workflows/nymex-daily.yml)
+        "nx_daily": opt("nymex_daily.csv", index_col=0, parse_dates=True),
+        "vm1": opt("price_vs_market_h1.csv", index_col="challenger"),
+        "vm4": opt("price_vs_market_h4.csv", index_col="challenger"),
+        "nx_strip": opt("nymex_strip_latest.csv", parse_dates=["as_of", "prior_as_of"]),
+        "nx_meta": json.loads((P / "nymex_meta.json").read_text()) if (P / "nymex_meta.json").exists() else {},
     }
 
 
@@ -98,10 +111,11 @@ def scenario_chart(hist: pd.Series, fc: pd.DataFrame, title: str):
 WINTER_M = [11, 12, 1, 2, 3]
 
 
-D = load()
+D = load(data_stamp())
 st.title("New England Natural Gas: Demand & Price Forecasting")
 st.caption("New England utility gas demand by state and company, Massachusetts GAF/LDAF per therm, "
-           "and the Henry Hub spot price · public EIA, Massachusetts DPU and ERA5 weather data · "
+           "and Henry Hub spot and NYMEX futures prices · public EIA, CME NYMEX, Massachusetts DPU and "
+           "ERA5 weather data · "
            "Created by Cathy Kam")
 
 if D is None:
@@ -456,6 +470,12 @@ with tab_t:
             st.caption(f"Henry Hub, {hh_now.index[-1]:%B %Y} average: ${hh_now.iloc[-1]:.3f}/therm. "
                        "GAF and LDAF are per-therm adjustments only; customer charges and base "
                        "distribution rates (set in each company's rate case) are billed on top.")
+        ws = D["nx_meta"].get("nymex_winter_strip")
+        if ws:
+            st.info(f"**NYMEX peak-period strip, {ws['label']}: ${ws['therm']:.3f}/therm** "
+                    f"(${ws['mmbtu']:.3f}/MMBtu, average of the monthly Henry Hub futures, as of "
+                    f"{pd.Timestamp(D['nx_meta']['nymex_strip_as_of']):%b %d, %Y}). This is the market price of the "
+                    "commodity behind the coming peak GAF, before pipeline, storage and delivery costs to New England.")
 
         companies = sorted(cur["company"])
         co = st.selectbox("Company", companies,
@@ -503,11 +523,11 @@ with tab_p:
     h = 1 if h_choice.startswith("1") else 4
     ps = D["ps1"] if h == 1 else D["ps4"]
     wf = D["wf1"] if h == 1 else D["wf4"]
-    challengers = ps.drop(index="Random walk")
+    challengers = ps.drop(index=["Random walk", MARKET], errors="ignore")
     best_p = challengers["RMSE log-return"].idxmin()
 
     cur = lat[(lat["h"] == h) & (lat["model"] == best_p)].iloc[0]
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric(f"Henry Hub, week ending {cur['as_of']:%b %d, %Y}", f"${cur['price_now']:.2f}")
     c2.metric(f"{h}-week forecast · {best_p}", f"${cur['price_fcst']:.2f}",
               f"{(cur['price_fcst']/cur['price_now']-1)*100:+.1f}%")
@@ -521,6 +541,20 @@ with tab_p:
         verdict = "random walk is better"
     c3.metric("RMSE vs. random walk (lower is better)", f"{rel:+.1f}%", verdict,
               delta_color="off")
+    if MARKET in ps.index:
+        vs_mkt = (ps.at[best_p, "RMSE log-return"] / ps.at[MARKET, "RMSE log-return"] - 1) * 100
+        vm = D["vm1"] if h == 1 else D["vm4"]
+        pm_ = float(vm.at[best_p, "DM p-value"]) if vm is not None and best_p in vm.index else float("nan")
+        if np.isnan(pm_):
+            mv = "beats the market" if vs_mkt < 0 else "market is better"
+        elif pm_ < 0.05:
+            mv = f"{'beats the market' if vs_mkt < 0 else 'market is better'} (p={pm_:.3f})"
+        else:
+            mv = f"difference not significant (p={pm_:.2f})"
+        c4.metric("RMSE vs. NYMEX futures (lower is better)", f"{vs_mkt:+.1f}%", mv,
+                  delta_color="off",
+                  help="The futures market's forecast: the front-month NYMEX price at the end of each week, "
+                       "scored on the same weeks as the models.")
 
     g = wf[wf["model"] == best_p].set_index("date")
     rw = wf[wf["model"] == "Random walk"].set_index("date")
@@ -529,6 +563,11 @@ with tab_p:
                              line=dict(color=NEUTRAL, width=1.5)))
     fig.add_trace(go.Scatter(x=g.index, y=g["price_fcst"], name=f"{best_p} forecast",
                              line=dict(color=MODEL_COLORS.get(best_p, SERIES[0]), width=1.5)))
+    mk = wf[wf["model"] == MARKET].set_index("date")
+    if len(mk):
+        fig.add_trace(go.Scatter(x=mk.index, y=mk["price_fcst"], name="NYMEX futures (market)",
+                                 line=dict(color=MODEL_COLORS.get(MARKET, INK_2), width=1.2, dash="dot"),
+                                 visible="legendonly"))
     add_events(fig, g.index.min())
     st.plotly_chart(style(fig, f"Out-of-sample {h}-week-ahead forecasts", "$/MMBtu"),
                     width="stretch")
@@ -538,7 +577,9 @@ with tab_p:
         st.subheader("Walk-forward scorecard")
         st.dataframe(ps.astype(float).map(lambda v: "–" if pd.isna(v) else f"{v:.3f}"), width="stretch")
         st.caption("Negative DM stat with p < 0.05 = statistically better than a random walk "
-                   "(Diebold-Mariano, Newey-West variance, HLN correction).")
+                   "(Diebold-Mariano, Newey-West variance, HLN correction). “NYMEX futures (market)” is the "
+                   "front-month futures price used as a forecast: the bar a model has to clear to add value "
+                   "over the market.")
     with b:
         imp = D["shap"].abs().mean().sort_values()
         fig = go.Figure(go.Bar(x=imp.values * 100, y=imp.index, orientation="h",
@@ -548,6 +589,48 @@ with tab_p:
         fig.update_xaxes(title="pts of 4-week % change", showgrid=True, gridcolor=GRID)
         fig.update_yaxes(showgrid=False)
         st.plotly_chart(fig, width="stretch")
+
+    nx, strip, nm = D["nx_daily"], D["nx_strip"], D["nx_meta"]
+    st.subheader("NYMEX Henry Hub futures")
+    if nx is None or strip is None:
+        st.info("NYMEX futures appear after the next data refresh (Actions → “NYMEX daily update”).")
+    else:
+        asof = pd.Timestamp(nm.get("nymex_strip_as_of", strip["as_of"].max()))
+        lag = len(pd.bdate_range(asof, pd.Timestamp.today().normalize())) - 1
+        (st.warning if lag > 4 else st.caption)(
+            f"Settlements as of {asof:%A, %B %d, %Y}" + (f" ({lag} business days old: the daily update may "
+            "have failed; check the repository's Actions tab)" if lag > 4 else ", updated every weekday "
+            "evening") + ". Source: CME NYMEX Henry Hub contracts via Yahoo Finance (daily close ≈ settlement).")
+        a, b = st.columns([1.15, 1])
+        with a:
+            d2 = nx.loc[nx.index.max() - pd.DateOffset(years=2):]
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=d2.index, y=d2["henry_hub_spot"], name="Henry Hub spot (EIA)",
+                                     line=dict(color=NEUTRAL, width=1.4), connectgaps=True))
+            fig.add_trace(go.Scatter(x=d2.index, y=d2["nymex_front"], name="NYMEX front month",
+                                     line=dict(color=SERIES[0], width=1.8)))
+            st.plotly_chart(style(fig, "Front-month futures vs. spot, last 2 years", "$/MMBtu", 400),
+                            width="stretch")
+        with b:
+            sx = strip.sort_values("contract")
+            labels = pd.to_datetime(sx["contract"]).dt.strftime("%b %y")
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=labels, y=sx["settle"], name=f"{asof:%b %d}",
+                                 marker=dict(color=SERIES[0])))
+            if sx["settle_prior"].notna().any():
+                fig.add_trace(go.Scatter(x=labels, y=sx["settle_prior"], mode="lines+markers",
+                                         name=f"{pd.Timestamp(sx['prior_as_of'].dropna().iloc[0]):%b %d}",
+                                         line=dict(color=INK_2, width=1.5, dash="dot")))
+            st.plotly_chart(style(fig, "Forward strip: price for each delivery month", "$/MMBtu", 400),
+                            width="stretch")
+        tbl = sx.assign(Month=labels)[["Month", "settle", "settle_therm", "change"]]
+        tbl.columns = ["Delivery month", "$/MMBtu", "$/therm", "Change vs. a week earlier ($/MMBtu)"]
+        with st.expander("Strip table"):
+            st.dataframe(tbl.set_index("Delivery month").style.format("{:+.3f}", subset=[tbl.columns[-1]])
+                         .format("{:.3f}", subset=["$/MMBtu"]).format("{:.4f}", subset=["$/therm"]),
+                         width="stretch")
+            st.download_button("Download strip (CSV)", sx.to_csv(index=False).encode(),
+                               file_name=f"nymex_strip_{asof:%Y%m%d}.csv")
 
     dfp = D["dfp"]
     s = dfp["storage_surplus_pct"].dropna().iloc[-260:]
@@ -565,6 +648,10 @@ with tab_m:
   residential + commercial + industrial. Power-plant burn is excluded because it follows electricity
   markets rather than heating weather.
 * **Price:** EIA daily Henry Hub spot, averaged to weeks ending Friday.
+* **NYMEX futures:** Henry Hub front-month and monthly contracts (CME NYMEX, via Yahoo Finance; EIA stopped
+  publishing futures in April 2024). Updated every weekday after settlement; downloads are checked
+  (plausible prices, expired contracts dropped, stale quotes rejected) and never overwrite good history.
+  The front-month price is also scored as the market's forecast, the benchmark a model must beat.
 * **Drivers:** EIA weekly working gas in storage (Lower 48), EIA monthly LNG exports.
 * **New England:** the same demand method run for CT, RI, NH, ME and VT (each state's history ends at its last month with all sectors reported), each with its own weather
   stations; company forecasts split each state's forecast by EIA Form 176 delivery shares.
@@ -591,5 +678,5 @@ log change in weekly average price 1 or 4 weeks ahead. Walk-forward, refit every
 * These rules are covered by unit tests in `tests/`.
 
 *Pipeline last run {m['run_at']}. Demand data through {m['demand_data_through']}; price data
-through {m['price_data_through']}.*
+through {m['price_data_through']}; NYMEX through {D['nx_meta'].get('nymex_front_through', 'n/a')}.*
 """)

@@ -1,0 +1,41 @@
+# Daily NYMEX update: futures settle every trading day (about 2:30 pm ET), so the front-month
+# history and the forward strip are refreshed each weekday evening. Only the NYMEX files are
+# touched; the full weekly refresh (refresh.yml) reruns the models.
+# If the data goes more than 4 business days without an update, the job fails and GitHub emails you.
+name: NYMEX daily update
+
+on:
+  schedule:
+    - cron: "41 22 * * 1-5"   # weekdays 22:41 UTC (6:41 pm EDT / 5:41 pm EST), after settlement
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-commits          # never commit at the same time as the weekly refresh
+  cancel-in-progress: false
+
+jobs:
+  nymex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "pandas>=2.2" "numpy>=2.0" "yfinance>=0.2.50"
+      - name: Pull NYMEX and rebuild the app files
+        run: python -m src.nymex
+      - name: Commit updated NYMEX files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/raw/nymex_*.csv data/processed/nymex_*
+          if git diff --cached --quiet; then echo "No new NYMEX data"; exit 0; fi
+          git commit -m "NYMEX daily update"
+          git pull --rebase
+          git push
+      - name: Check the data is current
+        run: python -m src.nymex --no-pull --check

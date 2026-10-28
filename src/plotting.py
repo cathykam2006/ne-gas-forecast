@@ -29,6 +29,7 @@ MODEL_COLORS = {
     "Ridge (fundamentals)": SERIES[1],
     "Ridge (all features)": SERIES[2],
     "LightGBM (all features)": SERIES[3],
+    "NYMEX futures (market)": INK_2,
 }
 
 SECTOR_COLORS = {

@@ -2,6 +2,7 @@
 -r requirements.txt
 requests>=2.32
 beautifulsoup4>=4.12   # DPU rates page
+yfinance>=0.2.50      # NYMEX futures (EIA stopped publishing them in April 2024)
 openpyxl>=3.1         # DPU historical GAF/LDAF workbook
 scipy>=1.14
 scikit-learn>=1.6

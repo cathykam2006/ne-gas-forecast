@@ -11,7 +11,7 @@ from datetime import datetime
 
 import pandas as pd
 
-from . import companies, config, data, features, region, tariffs
+from . import companies, config, data, features, nymex, region, tariffs
 from . import demand_backtest as dbt
 from . import demand_models as dm
 from . import price_models as pm
@@ -20,6 +20,7 @@ from . import price_models as pm
 def run(pull: bool = False, quick: bool = False) -> dict:
     if pull:
         data.pull_all()
+        nymex.pull()                      # never raises: a failed download keeps the old files
     raw = data.load_raw()
     out = config.PROCESSED_DIR
     out.mkdir(parents=True, exist_ok=True)
@@ -86,19 +87,30 @@ def run(pull: bool = False, quick: bool = False) -> dict:
     dfp.to_csv(out / "price_frame.csv")
 
     price_scores, latest = {}, []
+    front = nymex.load_front()
     for h in (1, 4):
         print(f"[Price] walk-forward h={h}")
         wf = pm.walk_forward(dfp, h=h, refit_every=26 if quick else 13)
+        wf = nymex.add_market_benchmark(wf, front, h)   # the futures market's own forecast
         wf.to_csv(out / f"price_wf_h{h}.csv", index=False)
         sc = pm.score_price(wf, h=h)
         sc.to_csv(out / f"price_scores_h{h}.csv")
+        if nymex.MARKET in set(wf["model"]):      # each model against the futures market (DM test)
+            vm = [pm.compare_models(wf, m, nymex.MARKET, h) for m in sc.index
+                  if m not in ("Random walk", nymex.MARKET)]
+            pd.DataFrame(vm).to_csv(out / f"price_vs_market_h{h}.csv", index=False)
         price_scores[h] = sc
         print(sc.round(4).to_string())
         for m in pm.model_zoo():
             f = pm.latest_forecast(dfp, m, h)
             f["model"] = m.name
             latest.append(f)
+    last = dfp["price"].dropna()
+    latest += nymex.latest_market_forecast(front, float(last.iloc[-1]), last.index[-1])
     pd.DataFrame(latest).to_csv(out / "price_latest_forecasts.csv", index=False)
+
+    print("\n[NYMEX] futures history and forward strip")
+    nymex_meta = nymex.build(out)
 
     # SHAP on the full-history LightGBM, h=4
     cols = features.PRICE_FEATURES
@@ -113,6 +125,7 @@ def run(pull: bool = False, quick: bool = False) -> dict:
         "price_data_through": f"{dfp['price'].dropna().index[-1]:%Y-%m-%d}",
         "best_demand_model": best_name,
         "mmcf_per_hdd": round(float(wn.attrs["mmcf_per_hdd"]), 2),
+        **nymex_meta,
     }
     (out / "meta.json").write_text(json.dumps(meta, indent=2))
     print("\nDone:", meta)

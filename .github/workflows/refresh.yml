@@ -1,4 +1,4 @@
-# Weekly refresh: pull new EIA, weather, DPU GAF/LDAF and company data, rerun
+# Weekly refresh: pull new EIA, weather, DPU GAF/LDAF, company and NYMEX futures data, rerun
 # backtests and forecasts,
 # commit data/ so the Streamlit app updates and the next run starts from
 # the saved history (weather is then refreshed incrementally).
@@ -12,6 +12,10 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: data-commits          # shared with nymex-daily.yml so the two never push at once
+  cancel-in-progress: false
 
 jobs:
   refresh:

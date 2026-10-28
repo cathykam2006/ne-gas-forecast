@@ -1,0 +1,28 @@
+# Keep the Streamlit apps awake. Community Cloud puts an app to sleep after 12 hours without
+# traffic; this visits each app every 6 hours in a headless browser and wakes it if needed.
+# Optional: set the repository variable APP_URLS (Settings -> Secrets and variables -> Actions ->
+# Variables) to a space-separated list of app links to override the defaults in the script.
+name: Keep Streamlit apps awake
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"   # every 6 hours, at 23 minutes past
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  visit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install playwright==1.48.0
+      - run: python -m playwright install --with-deps chromium
+      - run: python scripts/keep_awake.py
+        env:
+          APP_URLS: ${{ vars.APP_URLS }}

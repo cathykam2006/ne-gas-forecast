@@ -43,6 +43,7 @@ Backtests on data through July 2026 (demand) and October 2026 (price):
 |---|---|---|
 | MA deliveries to consumers by end use (MMcf) | EIA API v2 (`N3060MA2`, `N3010MA2`, `N3020MA2`, `N3035MA2`, `N3045MA2`) | Monthly |
 | Henry Hub spot ($/MMBtu) | EIA API v2 (`RNGWHHD`) | Daily |
+| NYMEX Henry Hub futures: front month and the 24-month forward strip ($/MMBtu) | CME NYMEX contracts via Yahoo Finance (`NG=F`, `NG<month><yy>.NYM`); EIA stopped publishing futures after April 5, 2024 | Daily (weekdays) |
 | Working gas in storage, Lower 48 / East (Bcf) | EIA Weekly Natural Gas Storage Report | Weekly |
 | U.S. LNG exports (MMcf) | EIA API v2 (`N9133US2`) | Monthly |
 | Daily max/min temperature | Open-Meteo ERA5 archive (no key) | Daily |
@@ -68,6 +69,17 @@ Target: log change in weekly average Henry Hub price, 1 and 4 weeks ahead.
 Random walk (benchmark) · Ridge on momentum · Ridge on fundamentals · Ridge on all features · LightGBM. Features: storage surplus vs. prior 5-year average, injections vs. normal, national degree-day anomaly, LNG export level and growth, price momentum and volatility, seasonality.
 
 Walk-forward evaluation with quarterly refits. Every challenger is compared to the random walk with a **Diebold–Mariano test** (Newey–West variance, Harvey–Leybourne–Newbold correction), so a small edge isn't mistaken for skill. LightGBM's native **TreeSHAP** shows which drivers move the forecast.
+
+**The market benchmark.** The NYMEX front-month price at the end of each week is the futures market's own forecast. It's scored on the same weeks as the models, and each model is tested against it with a Diebold–Mariano test. Beating a random walk is the minimum; beating the futures market is the real bar.
+
+### NYMEX futures
+`src/nymex.py` keeps the front-month history (2001 onward) and a dated history of the forward strip. Updates are incremental and checked before anything is saved:
+- prices outside $0.50–$50/MMBtu are rejected, and a feed that is mostly implausible fails;
+- contracts are dropped once they stop trading (three business days before the delivery month);
+- quotes without a settlement in the past week are rejected;
+- a failed download never overwrites good history.
+
+The app shows front month vs. spot, the strip with its change over the past week, and, on the MA price tab, the average strip for the Massachusetts peak GAF period (November–April) in $/therm.
 
 ### New England by state and company
 The Massachusetts method (utility-load target, 15-year normals, rolling-origin backtest) runs for Connecticut, Rhode Island, New Hampshire, Maine and Vermont (each state's history ends at its last fully reported month, since EIA publishes or withholds small-state sectors late), each with its own weather stations; each state keeps whichever model backtests best. For each of the ~25 New England gas utilities (EIA Form 176 annual company reports, 2010 onward, read from EIA's Natural Gas Query System):
@@ -102,6 +114,7 @@ Predecessor filings are merged into successors (Colonial → Boston Gas, Columbi
 │   ├── region.py               New England state forecasts
 │   ├── companies.py            EIA-176 company supply, demand, prices; company forecasts
 │   ├── tariffs.py              MA GAF/LDAF parser (DPU page + workbook)
+│   ├── nymex.py                NYMEX futures: front month, forward strip, market benchmark
 │   ├── pipeline.py             end-to-end run → data/processed/
 │   └── plotting.py             shared chart style
 ├── notebooks/
@@ -111,7 +124,10 @@ Predecessor filings are merged into successors (Colonial → Boston Gas, Columbi
 │   ├── 04_price_forecasting.ipynb
 │   └── 05_ma_price_per_therm.ipynb
 ├── tests/                      leakage and sanity tests (synthetic fixture)
-└── .github/workflows/refresh.yml   weekly automated refresh
+└── .github/workflows/
+    ├── refresh.yml             weekly: all data, models and forecasts (Fridays)
+    ├── nymex-daily.yml         weekdays after settlement: NYMEX futures only
+    └── keep-awake.yml          every 6 hours: keeps the Streamlit app from sleeping
 ```
 
 ## Run it
@@ -133,6 +149,7 @@ Then work through the notebooks in order.
 1. Commit `data/processed/` (the app reads only these files; no API key needed to view).
 2. On Streamlit Community Cloud, point a new app at `app.py`. `requirements.txt` holds only the app's light dependencies.
 3. Optional: add `EIA_API_KEY` as a GitHub Actions secret to enable the weekly refresh workflow, which reruns the pipeline every Friday after the storage report and commits new results.
+4. The NYMEX daily update needs no key. It runs each weekday evening after settlement and commits only the NYMEX files. If the data goes more than four business days without an update, the run fails and GitHub emails you. The app reloads its data whenever these files change, with no restart.
 
 ## Limitations and next steps
 - EIA publishes state deliveries monthly with a ~2-month lag; daily utility sendout data would allow day-ahead and design-day modeling.
