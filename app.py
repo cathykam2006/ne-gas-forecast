@@ -631,7 +631,7 @@ with tab_p:
                             width="stretch")
         with b:
             sx = strip.sort_values("contract")
-            labels = pd.to_datetime(sx["contract"]).dt.strftime("%b %y")
+            labels = pd.to_datetime(sx["contract"]).dt.strftime("%b '%y")    # "Nov '26", not a date
             fig = go.Figure()
             fig.add_trace(go.Bar(x=labels, y=sx["settle"], name=f"{asof:%b %d}",
                                  marker=dict(color=SERIES[0])))
@@ -639,16 +639,33 @@ with tab_p:
                 fig.add_trace(go.Scatter(x=labels, y=sx["settle_prior"], mode="lines+markers",
                                          name=f"{pd.Timestamp(sx['prior_as_of'].dropna().iloc[0]):%b %d}",
                                          line=dict(color=INK_2, width=1.5, dash="dot")))
-            st.plotly_chart(style(fig, "Forward strip: price for each delivery month", "$/MMBtu", 400),
+            st.plotly_chart(style(fig, "Futures price by delivery month", "$/MMBtu", 400),
                             width="stretch")
-        tbl = sx.assign(Month=labels)[["Month", "settle", "settle_therm", "change"]]
-        tbl.columns = ["Delivery month", "$/MMBtu", "$/therm", "Change vs. a week earlier ($/MMBtu)"]
-        with st.expander("Strip table"):
-            st.dataframe(tbl.set_index("Delivery month").style.format("{:+.3f}", subset=[tbl.columns[-1]])
-                         .format("{:.3f}", subset=["$/MMBtu"]).format("{:.4f}", subset=["$/therm"]),
-                         width="stretch")
-            st.download_button("Download strip (CSV)", sx.to_csv(index=False).encode(),
-                               file_name=f"nymex_strip_{asof:%Y%m%d}.csv")
+        prior = sx["prior_as_of"].dropna()
+        prior = pd.Timestamp(prior.iloc[0]) if len(prior) else None
+        change_col = (f"Change since {prior:%b %-d} ($/MMBtu)" if prior is not None
+                      else "Change over the past week ($/MMBtu)")
+        st.caption("Left: the nearest-to-expiry contract each day (it switches to the next month a day or "
+                   "two before expiry, which can show as a step). Right: today's price for gas delivered in "
+                   "each of the next 24 months, i.e. the market's price for locking in future supply"
+                   + ("; the dotted line is the same prices a week earlier." if prior is not None else "."))
+        tbl = pd.DataFrame({
+            "Delivery month": pd.to_datetime(sx["contract"]).dt.strftime("%B %Y").values,
+            "Futures price ($/MMBtu)": sx["settle"].values,
+            "Futures price ($/therm)": sx["settle_therm"].values,
+        }).set_index("Delivery month")
+        fmt = {tbl.columns[0]: "{:.3f}", tbl.columns[1]: "{:.4f}"}
+        if prior is not None:                    # week-on-week change, once a week of prices exists
+            tbl[change_col] = sx["change"].values
+            fmt[change_col] = "{:+.3f}"
+        with st.expander("Futures prices by delivery month (table)"):
+            st.dataframe(tbl.style.format(fmt, na_rep=""), width="stretch")
+            if prior is None:
+                st.caption("A column with the change over the past week appears once a week of daily "
+                           "prices has been collected.")
+            st.caption("1 MMBtu = 10 therms. Prices are the daily close of each CME NYMEX Henry Hub contract.")
+            st.download_button("Download table (CSV)", tbl.to_csv().encode(),
+                               file_name=f"nymex_futures_by_month_{asof:%Y%m%d}.csv")
 
     dfp = D["dfp"]
     s = dfp["storage_surplus_pct"].dropna().iloc[-260:]
