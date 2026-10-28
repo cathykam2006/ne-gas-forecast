@@ -609,7 +609,13 @@ with tab_p:
         st.plotly_chart(fig, width="stretch")
 
     nx, strip, nm = D["nx_daily"], D["nx_strip"], D["nx_meta"]
-    st.subheader("NYMEX Henry Hub futures")
+    st.subheader("NYMEX Henry Hub futures (national benchmark)")
+    st.markdown("Wholesale natural gas futures for delivery at **Henry Hub, Erath, Louisiana**, the U.S. "
+                "pricing point. This is **not** a New England or utility price. Gas delivered into New England "
+                "costs more (the Algonquin city-gate premium can reach several dollars per MMBtu on cold "
+                "winter days), and each utility's GAF adds pipeline capacity, "
+                "storage, LNG peaking and reconciliations on top. Use it as the market's view of the "
+                "commodity cost; the Massachusetts tab shows what each company actually charges.")
     if nx is None or strip is None:
         st.info("NYMEX futures appear after the next data refresh (Actions → “NYMEX daily update”).")
     else:
@@ -627,7 +633,7 @@ with tab_p:
                                      line=dict(color=NEUTRAL, width=1.4), connectgaps=True))
             fig.add_trace(go.Scatter(x=d2.index, y=d2["nymex_front"], name="NYMEX front month",
                                      line=dict(color=SERIES[0], width=1.8)))
-            st.plotly_chart(style(fig, "Front-month futures vs. spot, last 2 years", "$/MMBtu", 400),
+            st.plotly_chart(style(fig, "Henry Hub: front-month futures vs. spot, last 2 years", "$/MMBtu", 400),
                             width="stretch")
         with b:
             sx = strip.sort_values("contract")
@@ -639,7 +645,7 @@ with tab_p:
                 fig.add_trace(go.Scatter(x=labels, y=sx["settle_prior"], mode="lines+markers",
                                          name=f"{pd.Timestamp(sx['prior_as_of'].dropna().iloc[0]):%b %d}",
                                          line=dict(color=INK_2, width=1.5, dash="dot")))
-            st.plotly_chart(style(fig, "Futures price by delivery month", "$/MMBtu", 400),
+            st.plotly_chart(style(fig, "Henry Hub futures price by delivery month", "$/MMBtu", 400),
                             width="stretch")
         prior = sx["prior_as_of"].dropna()
         prior = pd.Timestamp(prior.iloc[0]) if len(prior) else None
@@ -651,21 +657,23 @@ with tab_p:
                    + ("; the dotted line is the same prices a week earlier." if prior is not None else "."))
         tbl = pd.DataFrame({
             "Delivery month": pd.to_datetime(sx["contract"]).dt.strftime("%B %Y").values,
-            "Futures price ($/MMBtu)": sx["settle"].values,
-            "Futures price ($/therm)": sx["settle_therm"].values,
+            "Henry Hub futures ($/MMBtu)": sx["settle"].values,
+            "Henry Hub futures ($/therm)": sx["settle_therm"].values,
         }).set_index("Delivery month")
         fmt = {tbl.columns[0]: "{:.3f}", tbl.columns[1]: "{:.4f}"}
         if prior is not None:                    # week-on-week change, once a week of prices exists
             tbl[change_col] = sx["change"].values
             fmt[change_col] = "{:+.3f}"
-        with st.expander("Futures prices by delivery month (table)"):
+        with st.expander("Henry Hub futures prices by delivery month (table)"):
             st.dataframe(tbl.style.format(fmt, na_rep=""), width="stretch")
             if prior is None:
                 st.caption("A column with the change over the past week appears once a week of daily "
                            "prices has been collected.")
-            st.caption("1 MMBtu = 10 therms. Prices are the daily close of each CME NYMEX Henry Hub contract.")
+            st.caption("Delivery point: Henry Hub, Louisiana (national benchmark, not a New England or utility "
+                       "price). 1 MMBtu = 10 therms. Prices are the daily close of each CME NYMEX Henry Hub "
+                       "contract.")
             st.download_button("Download table (CSV)", tbl.to_csv().encode(),
-                               file_name=f"nymex_futures_by_month_{asof:%Y%m%d}.csv")
+                               file_name=f"henry_hub_futures_by_month_{asof:%Y%m%d}.csv")
 
     dfp = D["dfp"]
     s = dfp["storage_surplus_pct"].dropna().iloc[-260:]

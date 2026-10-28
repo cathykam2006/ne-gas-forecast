@@ -43,7 +43,7 @@ Backtests on data through July 2026 (demand) and October 2026 (price):
 |---|---|---|
 | MA deliveries to consumers by end use (MMcf) | EIA API v2 (`N3060MA2`, `N3010MA2`, `N3020MA2`, `N3035MA2`, `N3045MA2`) | Monthly |
 | Henry Hub spot (<span>$</span>/MMBtu) | EIA API v2 (`RNGWHHD`) | Daily |
-| NYMEX Henry Hub futures: front month and the futures price for each of the next 24 delivery months (<span>$</span>/MMBtu) | CME NYMEX contracts via Yahoo Finance (`NG=F`, `NG<month><yy>.NYM`); EIA stopped publishing futures after April 5, 2024 | Daily (weekdays) |
+| NYMEX Henry Hub futures (national benchmark, delivered at Henry Hub, Louisiana; not a New England price): front month and the futures price for each of the next 24 delivery months (<span>$</span>/MMBtu) | CME NYMEX contracts via Yahoo Finance (`NG=F`, `NG<month><yy>.NYM`); EIA stopped publishing futures after April 5, 2024 | Daily (weekdays) |
 | Working gas in storage, Lower 48 / East (Bcf) | EIA Weekly Natural Gas Storage Report | Weekly |
 | U.S. LNG exports (MMcf) | EIA API v2 (`N9133US2`) | Monthly |
 | Daily max/min temperature | Open-Meteo ERA5 archive (no key) | Daily |
