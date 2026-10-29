@@ -86,13 +86,13 @@ display(resize((width) => {
   return Plot.plot({
     width, height: narrow ? 320 : 400, marginLeft: 46, marginTop: 30, marginRight: 12, style: {fontSize: "12px"},
     x: {type: "utc", domain: [oStart, d3.utcDay.offset(oEnd, 10)], label: null,
-        ticks: d3.utcMonth.every(narrow ? 4 : ahead === "Next 12 months" ? 2 : 3),
-        tickFormat: (d) => d3.utcFormat(d.getUTCMonth() === 0 || narrow ? "%b %Y" : "%b")(d)},
+        ticks: d3.utcMonth.every(narrow ? 6 : ahead === "Next 12 months" ? 2 : 3),
+        tickFormat: (d) => narrow ? d3.utcFormat("%b '%y")(d) : d3.utcFormat(d.getUTCMonth() === 0 ? "%b %Y" : "%b")(d)},
     y: {domain: [yMin, yMax], grid: true, label: "$/MMBtu", labelArrow: "none", tickFormat: (d) => "$" + d.toFixed(d % 1 ? 1 : 0), clamp: true},
     marks: [
       Plot.rectX([{}], {x1: oLast, x2: oEnd, y1: yMin, y2: yMax, fill: "var(--fc-wash)"}),
       Plot.ruleX([oLast], {stroke: "var(--muted)", strokeDasharray: "2,3"}),
-      Plot.text([`Latest actual · ${fmtMD(oLast)}`], {x: oLast, frameAnchor: "top", dy: -20, dx: -6, textAnchor: "end", fill: "var(--muted)", fontSize: 11}),
+      narrow ? null : Plot.text([`Latest actual · ${fmtMD(oLast)}`], {x: oLast, frameAnchor: "top", dy: -20, dx: -6, textAnchor: "end", fill: "var(--muted)", fontSize: 11}),
       Plot.text(["FORECAST →"], {x: oLast, frameAnchor: "top", dy: -20, dx: 6, textAnchor: "start", fill: "var(--accent)", fontWeight: 700, fontSize: 11}),
       today > oLast && today < oEnd ? Plot.ruleX([today], {stroke: "var(--rule)"}) : null,
       today > oLast && today < oEnd ? Plot.text(["Today"], {x: today, frameAnchor: "bottom", dy: -4, dx: 3, textAnchor: "start", fill: "var(--muted)", fontSize: 10}) : null,

@@ -57,12 +57,12 @@ display(resize((width) => {
   return Plot.plot({
     width, height: narrow ? 340 : 420, marginLeft: 44, marginTop: 30, marginRight: 12, style: {fontSize: "12px"},
     x: {type: "utc", domain: [d3.utcDay.offset(hist[0].d, -15), end], label: null,
-        ticks: d3.utcMonth.every(narrow ? 6 : 3), tickFormat: (d) => d3.utcFormat(d.getUTCMonth() === 0 || narrow ? "%b %Y" : "%b")(d)},
+        ticks: d3.utcMonth.every(narrow ? 6 : 3), tickFormat: (d) => narrow ? d3.utcFormat("%b '%y")(d) : d3.utcFormat(d.getUTCMonth() === 0 ? "%b %Y" : "%b")(d)},
     y: {domain: [0, yMax], grid: true, label: "Bcf per month", labelArrow: "none"},
     marks: [
       Plot.rectX([{}], {x1: last, x2: end, y1: 0, y2: yMax, fill: "var(--fc-wash)"}),
       Plot.ruleX([last], {stroke: "var(--muted)", strokeDasharray: "2,3"}),
-      Plot.text([`Latest actual · ${fmtMon(last)}`], {x: last, frameAnchor: "top", dy: -20, dx: -6, textAnchor: "end", fill: "var(--muted)", fontSize: 11}),
+      narrow ? null : Plot.text([`Latest actual · ${fmtMon(last)}`], {x: last, frameAnchor: "top", dy: -20, dx: -6, textAnchor: "end", fill: "var(--muted)", fontSize: 11}),
       Plot.text(["FORECAST →"], {x: last, frameAnchor: "top", dy: -20, dx: 6, textAnchor: "start", fill: "var(--accent)", fontWeight: 700, fontSize: 11}),
       Plot.areaY(fc, {x: "d", y1: "lo90", y2: "hi90", fill: "var(--fc-band)", curve: "monotone-x"}),
       Plot.lineY(hist, {x: "d", y: "v", stroke: "var(--ink)", strokeWidth: 2, curve: "monotone-x"}),
