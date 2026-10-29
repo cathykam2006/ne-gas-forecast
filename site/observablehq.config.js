@@ -6,6 +6,7 @@ export default {
   style: "style.css",
   pages: [
     {name: "Henry Hub price outlook", path: "/"},
+    {name: "Massachusetts demand", path: "/massachusetts-demand"},
     {name: "Massachusetts GAF", path: "/massachusetts-gaf"}
   ],
   toc: false,

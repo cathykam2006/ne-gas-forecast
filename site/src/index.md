@@ -49,7 +49,83 @@ const SHORT_E = {"Winter Storm Fern": "Storm Fern", "Golden Pass LNG first cargo
 }
 ```
 
-## Forecast vs. actual
+## Where the price is headed
+
+<div class="controls">
+
+```js
+const ahead = view(Inputs.radio(["Next 12 months", "Next 24 months"], {value: "Next 12 months", label: "Look ahead"}));
+```
+
+</div>
+
+```js
+const O = D.outlook;
+const oHist = O.history.map((r) => ({d: parse(r.d), v: r.v}));
+const oPath = O.path.map((r) => ({...r, d: parse(r.d)}));
+const oLast = parse(O.last_date);
+const oEnd = d3.utcMonth.offset(oLast, ahead === "Next 12 months" ? 12 : 24);
+const oStart = d3.utcMonth.offset(oLast, -12);
+const oFut = O.futures.map((r) => ({...r, d: parse(r.d)})).filter((r) => r.d <= oEnd);
+const oShown = oHist.filter((r) => r.d >= oStart);
+const p4 = oPath.at(-1);
+```
+
+<div class="card">
+<div class="legend"><span><i class="sw" style="border-color:var(--ink)"></i>Actual (weekly average)</span><span><i class="sw" style="border-color:var(--accent);border-top-style:dashed;border-top-width:3px"></i>Model forecast · ${O.model}</span><span><i class="sw box" style="background:var(--fc-band)"></i>Likely range (${Math.round(O.level * 100)}%)</span><span><i class="sw" style="border-color:var(--futures);border-top-style:dotted;border-top-width:3px"></i>NYMEX futures (market forecast)</span></div>
+
+```js
+display(resize((width) => {
+  const narrow = width < 560;
+  const q = (p) => d3.quantile(oShown, p, (r) => r.v);
+  const yMax = Math.max(d3.max(oPath, (r) => r.hi), d3.max(oFut, (r) => r.v) ?? 0, q(0.9)) * 1.25;
+  const yMin = Math.min(d3.min(oPath, (r) => r.lo), d3.min(oFut, (r) => r.v) ?? 1e9, q(0.05)) * 0.8;
+  const peak = d3.greatest(oShown, (r) => r.v);
+  const clip = (v) => Math.min(v, yMax);
+  const today = new Date();
+  return Plot.plot({
+    width, height: narrow ? 320 : 400, marginLeft: 46, marginTop: 30, marginRight: 12, style: {fontSize: "12px"},
+    x: {type: "utc", domain: [oStart, d3.utcDay.offset(oEnd, 10)], label: null,
+        ticks: d3.utcMonth.every(narrow ? 6 : ahead === "Next 12 months" ? 2 : 3),
+        tickFormat: (d) => narrow ? d3.utcFormat("%b '%y")(d) : d3.utcFormat(d.getUTCMonth() === 0 ? "%b %Y" : "%b")(d)},
+    y: {domain: [yMin, yMax], grid: true, label: "$/MMBtu", labelArrow: "none", tickFormat: (d) => "$" + d.toFixed(d % 1 ? 1 : 0), clamp: true},
+    marks: [
+      Plot.rectX([{}], {x1: oLast, x2: oEnd, y1: yMin, y2: yMax, fill: "var(--fc-wash)"}),
+      Plot.ruleX([oLast], {stroke: "var(--muted)", strokeDasharray: "2,3"}),
+      narrow ? null : Plot.text([`Latest actual · ${fmtMD(oLast)}`], {x: oLast, frameAnchor: "top", dy: -20, dx: -6, textAnchor: "end", fill: "var(--muted)", fontSize: 11}),
+      Plot.text(["FORECAST →"], {x: oLast, frameAnchor: "top", dy: -20, dx: 6, textAnchor: "start", fill: "var(--accent)", fontWeight: 700, fontSize: 11}),
+      today > oLast && today < oEnd ? Plot.ruleX([today], {stroke: "var(--rule)"}) : null,
+      today > oLast && today < oEnd ? Plot.text(["Today"], {x: today, frameAnchor: "bottom", dy: -4, dx: 3, textAnchor: "start", fill: "var(--muted)", fontSize: 10}) : null,
+      Plot.areaY(oPath, {x: "d", y1: "lo", y2: (r) => clip(r.hi), fill: "var(--fc-band)", curve: "linear"}),
+      Plot.lineY(oShown, {x: "d", y: (r) => clip(r.v), stroke: "var(--ink)", strokeWidth: 2}),
+      peak.v > yMax ? Plot.text([peak], {x: "d", y: yMax, text: (r) => `↑ $${r.v.toFixed(2)} week of ${fmtMD(r.d)} (off scale)`,
+        textAnchor: "start", dx: 6, dy: 8, fill: "var(--muted)", fontSize: 11}) : null,
+      Plot.lineY(oPath, {x: "d", y: "f", stroke: "var(--accent)", strokeWidth: 3.2, strokeDasharray: "7,5"}),
+      Plot.dot(oPath.filter((r) => r.h > 0), {x: "d", y: "f", r: 5.5, fill: "var(--surface)", stroke: "var(--accent)", strokeWidth: 2.5}),
+      Plot.text([p4], {x: "d", y: "hi", text: (r) => `Model: $${r.f.toFixed(2)} in ${r.h} wk`, dy: -12, textAnchor: "middle",
+        fill: "var(--accent)", fontWeight: 700, fontSize: 12, stroke: "var(--surface)", strokeWidth: 4, paintOrder: "stroke"}),
+      Plot.lineY(oFut, {x: "d", y: "v", stroke: "var(--futures)", strokeWidth: 2, strokeDasharray: "2,4", curve: "catmull-rom"}),
+      Plot.dot(oFut, {x: "d", y: "v", symbol: "diamond", r: 4.5, fill: "var(--futures)"}),
+      oFut.length ? Plot.text([oFut[0]], {x: "d", y: "v", text: () => "NYMEX futures", dy: 18, dx: 6, textAnchor: "start",
+        fill: "var(--futures)", fontWeight: 600, fontSize: 11}) : null,
+      Plot.tip([...oShown.map((r) => ({...r, kind: "Actual"})), ...oPath.filter((r) => r.h > 0).map((r) => ({d: r.d, v: r.f, lo: r.lo, hi: r.hi, h: r.h, kind: "Model"})),
+                ...oFut.map((r) => ({...r, kind: "Futures"}))],
+        Plot.pointerX({x: "d", y: (r) => clip(r.v), title: (r) => r.kind === "Actual" ? `Week ending ${fmtD(r.d)}\nActual: ${usd(r.v)}`
+          : r.kind === "Model" ? `${fmtD(r.d)}: ${r.h}-week forecast\n${usd(r.v)} (likely ${usd(r.lo)}–${usd(r.hi)})`
+          : `${d3.utcFormat("%B %Y")(r.d)} futures contract\n${usd(r.v, 3)}/MMBtu`}))
+    ].filter(Boolean)
+  });
+}));
+```
+
+</div>
+
+<p class="fine">Solid line: actual weekly price through ${fmtD(oLast)}. Dashed blue: the ${O.model} model’s 1- and 4-week forecasts, with the range that held ${Math.round(O.level * 100)}% of the time in its walk-forward backtest. Dotted green: NYMEX futures by delivery month${O.futures_as_of ? `, as of ${fmtMD(parse(O.futures_as_of))}` : ""}, the price the market will lock in today for each future month.</p>
+
+## Forecast track record
+
+<p class="fine">How the model's past forecasts compared with what actually happened.</p>
+
 
 <div class="controls">
 

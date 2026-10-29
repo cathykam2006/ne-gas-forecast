@@ -115,6 +115,7 @@ Predecessor filings are merged into successors (Colonial → Boston Gas, Columbi
 │   ├── companies.py            EIA-176 company supply, demand, prices; company forecasts
 │   ├── tariffs.py              MA GAF/LDAF parser (DPU page + workbook)
 │   ├── nymex.py                NYMEX futures: front month, prices by delivery month, market benchmark
+│   ├── outlook.py              forward-looking price and demand forecasts shared by the app and site
 │   ├── pipeline.py             end-to-end run → data/processed/
 │   └── plotting.py             shared chart style
 ├── notebooks/
@@ -125,6 +126,7 @@ Predecessor filings are merged into successors (Colonial → Boston Gas, Columbi
 │   └── 05_ma_price_per_therm.ipynb
 ├── site/                       Observable Framework dashboard (static, GitHub Pages)
 │   ├── src/index.md            Henry Hub price outlook
+│   ├── src/massachusetts-demand.md  Massachusetts demand outlook
 │   ├── src/massachusetts-gaf.md  Massachusetts GAF and LDAF by company
 │   └── src/data/*.json.py      data loaders: read data/processed at build time
 ├── tests/                      leakage and sanity tests (synthetic fixture)
@@ -158,7 +160,7 @@ Then work through the notebooks in order.
 
 ### Dashboard site (Observable Framework)
 
-`site/` is a static version of the Henry Hub and Massachusetts GAF tabs built with [Observable Framework](https://observablehq.com/framework/). Its Python data loaders read `data/processed/`, so it shows the same numbers as the Streamlit app. The `Publish site` workflow rebuilds it and deploys it to GitHub Pages after every NYMEX daily update and weekly refresh, and after any push that changes the site or the data. It loads instantly and never sleeps.
+`site/` is a static version of the Henry Hub, Massachusetts demand and Massachusetts GAF tabs built with [Observable Framework](https://observablehq.com/framework/). Its Python data loaders read `data/processed/`, so it shows the same numbers as the Streamlit app. The `Publish site` workflow rebuilds it and deploys it to GitHub Pages after every NYMEX daily update and weekly refresh, and after any push that changes the site or the data. It loads instantly and never sleeps.
 
 One-time setup: in the repository, **Settings → Pages → Build and deployment → Source: GitHub Actions**, then **Actions → Publish site → Run workflow**.
 
