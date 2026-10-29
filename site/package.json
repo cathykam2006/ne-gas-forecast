@@ -1,0 +1,15 @@
+{
+  "name": "ne-gas-forecast-site",
+  "private": true,
+  "type": "module",
+  "description": "Static dashboard for ne-gas-forecast, built with Observable Framework from data/processed.",
+  "scripts": {
+    "dev": "observable preview",
+    "build": "observable build",
+    "clean": "rimraf src/.observablehq/cache"
+  },
+  "dependencies": {
+    "@observablehq/framework": "1.13.4"
+  },
+  "engines": { "node": ">=20" }
+}
