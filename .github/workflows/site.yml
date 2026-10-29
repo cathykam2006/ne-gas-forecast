@@ -1,0 +1,61 @@
+# Builds the Observable Framework site in site/ from data/processed and publishes it to GitHub Pages.
+# Runs after every push to main that touches the site or the data, and after the NYMEX daily update
+# and weekly refresh finish (their data commits are made by the Actions bot, which does not trigger
+# push events, so workflow_run picks them up).
+name: Publish site
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "data/processed/**", "src/config.py", ".github/workflows/site.yml"]
+  workflow_run:
+    workflows: ["NYMEX daily update", "Weekly data refresh"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.ref }}   # include the bot's new data commit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "pandas>=2.2" "numpy>=2.0"
+      - name: Build
+        working-directory: site
+        run: |
+          npm ci
+          npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

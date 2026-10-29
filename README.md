@@ -6,7 +6,7 @@ Forecasts **New England utility gas demand by state and company**, breaks down *
 
 **App tabs:** Gas companies (map, treemap, leaderboard and deep dive for every New England utility) · New England by state · Massachusetts demand · MA price per therm (GAF/LDAF) · Henry Hub price · Method
 
-**Live app:** [https://ne-gas-forecast-zmi45pfx6pdyncuxxazxcq.streamlit.app/](https://ne-gas-forecast-zmi45pfx6pdyncuxxazxcq.streamlit.app/) · **Author:** Cathy Kam
+**Live app:** [https://ne-gas-forecast-zmi45pfx6pdyncuxxazxcq.streamlit.app/](https://ne-gas-forecast-zmi45pfx6pdyncuxxazxcq.streamlit.app/) · **Dashboard site (Henry Hub, Massachusetts GAF):** [https://cathykam2006.github.io/ne-gas-forecast/](https://cathykam2006.github.io/ne-gas-forecast/) · **Author:** Cathy Kam
 
 ---
 
@@ -123,10 +123,15 @@ Predecessor filings are merged into successors (Colonial → Boston Gas, Columbi
 │   ├── 03_demand_forecasting.ipynb
 │   ├── 04_price_forecasting.ipynb
 │   └── 05_ma_price_per_therm.ipynb
+├── site/                       Observable Framework dashboard (static, GitHub Pages)
+│   ├── src/index.md            Henry Hub price outlook
+│   ├── src/massachusetts-gaf.md  Massachusetts GAF and LDAF by company
+│   └── src/data/*.json.py      data loaders: read data/processed at build time
 ├── tests/                      leakage and sanity tests (synthetic fixture)
 └── .github/workflows/
     ├── refresh.yml             weekly: all data, models and forecasts (Fridays)
     ├── nymex-daily.yml         weekdays after settlement: NYMEX futures only
+    ├── site.yml                rebuilds and publishes the dashboard site after each data update
     └── keep-awake.yml          every 6 hours: keeps the Streamlit app from sleeping
 ```
 
@@ -150,6 +155,14 @@ Then work through the notebooks in order.
 2. On Streamlit Community Cloud, point a new app at `app.py`. `requirements.txt` holds only the app's light dependencies.
 3. Optional: add `EIA_API_KEY` as a GitHub Actions secret to enable the weekly refresh workflow, which reruns the pipeline every Friday after the storage report and commits new results.
 4. The NYMEX daily update needs no key. It runs each weekday evening after settlement and commits only the NYMEX files. If the data goes more than four business days without an update, the run fails and GitHub emails you. The app reloads its data whenever these files change, with no restart.
+
+### Dashboard site (Observable Framework)
+
+`site/` is a static version of the Henry Hub and Massachusetts GAF tabs built with [Observable Framework](https://observablehq.com/framework/). Its Python data loaders read `data/processed/`, so it shows the same numbers as the Streamlit app. The `Publish site` workflow rebuilds it and deploys it to GitHub Pages after every NYMEX daily update and weekly refresh, and after any push that changes the site or the data. It loads instantly and never sleeps.
+
+One-time setup: in the repository, **Settings → Pages → Build and deployment → Source: GitHub Actions**, then **Actions → Publish site → Run workflow**.
+
+To work on it locally (Node 20+): `cd site && npm install && npm run dev`, then open http://127.0.0.1:3000.
 
 ## Limitations and next steps
 - EIA publishes state deliveries monthly with a ~2-month lag; daily utility sendout data would allow day-ahead and design-day modeling.
