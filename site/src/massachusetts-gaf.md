@@ -61,7 +61,7 @@ const peakAvg = d3.mean(peakStrip, (r) => r.therm);
 
 ## Rates in effect, ${fmtMonth(latest)}
 
-<p class="note">${cat}, $/therm, sorted from lowest to highest. The bar shows GAF + LDAF.</p>
+<p class="fine">${cat}, $/therm, sorted from lowest to highest. The bar shows GAF + LDAF.</p>
 
 ```js
 {
@@ -114,7 +114,7 @@ display(resize((width) => {
   return Plot.plot({
     width, height: 340, marginLeft: 48, marginRight: 8, style: {fontSize: "12px"},
     x: {type: "utc", domain: [spanStart, end], label: null,
-        ticks: monthly ? d3.utcMonth.every(width < 560 ? 2 : 1) : span === "Last 5 years" ? d3.utcYear.every(1) : d3.utcYear.every(width < 560 ? 4 : 2),
+        ticks: monthly ? d3.utcMonth.range(spanStart, end, width < 560 ? 2 : 1) : span === "Last 5 years" ? d3.utcYear.every(1) : d3.utcYear.every(width < 560 ? 4 : 2),
         tickFormat: monthly ? (d) => d3.utcFormat(d.getUTCMonth() === 0 ? "%b %Y" : "%b")(d) : "%Y"},
     y: {grid: true, label: "$/therm", labelArrow: "none", tickFormat: (d) => "$" + d.toFixed(2)},
     marks: [
@@ -138,11 +138,12 @@ display(resize((width) => {
 ```js
 const active = new Set(current.map((r) => r.co));
 const lines = inCat.filter((r) => active.has(r.co) && r.d >= spanStart);
+const lineEnds = lines.filter((r) => +r.d === +latest).map((r) => ({...r, d: d3.utcMonth.offset(latest, 1)}));
 const prem = d3.rollups(lines, (v) => d3.mean(v, (r) => r.gaf), (r) => r.co)
   .map(([c, g]) => g - d3.mean(hhSpan, (r) => r.v));
 ```
 
-<p class="note">GAF by company, ${span.toLowerCase()}. ${company} is highlighted; change it above. Over this window the average GAF sits $${d3.min(prem).toFixed(2)}–$${d3.max(prem).toFixed(2)}/therm above Henry Hub across companies: that premium covers pipeline capacity into New England, storage, LNG peaking supply and prior-period reconciliations.</p>
+<p class="fine">GAF by company, ${span.toLowerCase()}. ${company} is highlighted; change it above. Over this window the average GAF sits $${d3.min(prem).toFixed(2)}–$${d3.max(prem).toFixed(2)}/therm above Henry Hub across companies: that premium covers pipeline capacity into New England, storage, LNG peaking supply and prior-period reconciliations.</p>
 
 <div class="card">
 <div class="legend"><span><i class="sw" style="border-color:var(--accent)"></i>${company}</span><span><i class="sw" style="border-color:var(--rule)"></i>Other companies</span><span><i class="sw" style="border-color:var(--actual);border-top-style:dotted"></i>Henry Hub wholesale</span></div>
@@ -150,11 +151,12 @@ const prem = d3.rollups(lines, (v) => d3.mean(v, (r) => r.gaf), (r) => r.co)
 ```js
 display(resize((width) => {
   const end = d3.utcMonth.offset(latest, 1);
-  const others = lines.filter((r) => r.co !== company), mine = lines.filter((r) => r.co === company);
+  const steps = [...lines, ...lineEnds];
+  const others = steps.filter((r) => r.co !== company), mine = steps.filter((r) => r.co === company);
   return Plot.plot({
     width, height: 360, marginLeft: 48, marginRight: 8, style: {fontSize: "12px"},
     x: {type: "utc", domain: [spanStart, end], label: null,
-        ticks: monthly ? d3.utcMonth.every(width < 560 ? 2 : 1) : span === "Last 5 years" ? d3.utcYear.every(1) : d3.utcYear.every(width < 560 ? 4 : 2),
+        ticks: monthly ? d3.utcMonth.range(spanStart, end, width < 560 ? 2 : 1) : span === "Last 5 years" ? d3.utcYear.every(1) : d3.utcYear.every(width < 560 ? 4 : 2),
         tickFormat: monthly ? (d) => d3.utcFormat(d.getUTCMonth() === 0 ? "%b %Y" : "%b")(d) : "%Y"},
     y: {grid: true, label: "GAF, $/therm", labelArrow: "none", tickFormat: (d) => "$" + d.toFixed(2)},
     marks: [
@@ -169,4 +171,4 @@ display(resize((width) => {
 
 </div>
 
-<p class="note">Source: Massachusetts DPU current gas adjustment factors and historical GAF/LDAF workbook, May 2008 onward. Predecessor companies are mapped to today’s names (Bay State/Columbia → Eversource Gas of MA; KeySpan → National Grid; New England Gas → Liberty). Rates filed in $/Ccf are converted to $/therm.</p>
+<p class="fine">Source: Massachusetts DPU current gas adjustment factors and historical GAF/LDAF workbook, May 2008 onward. Predecessor companies are mapped to today’s names (Bay State/Columbia → Eversource Gas of MA; KeySpan → National Grid; New England Gas → Liberty). Rates filed in $/Ccf are converted to $/therm.</p>

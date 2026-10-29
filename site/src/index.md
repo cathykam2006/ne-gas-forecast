@@ -78,7 +78,7 @@ const eventLabels = [...pointEvents.map((e) => ({t: e.t, label: e.label})), ...p
   .sort((a, b) => a.t - b.t).map((d, i) => ({...d, row: i % 2}));
 ```
 
-<p class="note">${fmtD(fcStart)} – ${fmtD(fcEnd)}. Each point is the week the forecast was for, so the blue line shows what the model predicted ${horizon} week${horizon > 1 ? "s" : ""} earlier. Events are context, not model inputs.</p>
+<p class="fine">${fmtD(fcStart)} – ${fmtD(fcEnd)}. Each point is the week the forecast was for, so the blue line shows what the model predicted ${horizon} week${horizon > 1 ? "s" : ""} earlier. Events are context, not model inputs.</p>
 
 <div class="card">
 <div class="legend"><span><i class="sw" style="border-color:var(--actual)"></i>Actual price (weekly average)</span><span><i class="sw" style="border-color:var(--accent)"></i>${H.best} forecast, made ${horizon} week${horizon > 1 ? "s" : ""} earlier</span>${eventLabels.length ? html`<span><i class="sw" style="border-color:var(--event);border-top-style:dashed"></i>Market event</span>` : ""}</div>
@@ -122,7 +122,7 @@ display(html`<ul class="events">${[...new Set(eventLabels.map((l) => l.label))].
 
 ## What the futures market expects
 
-<p class="note">CME NYMEX Henry Hub contracts, daily close. Settlements as of ${fmtD(parse(D.strip_as_of))}.</p>
+<p class="fine">CME NYMEX Henry Hub contracts, daily close. Settlements as of ${fmtD(parse(D.strip_as_of))}.</p>
 
 ```js
 const front = D.front.map((r) => ({...r, d: parse(r.d)}));
@@ -155,7 +155,7 @@ display(resize((width) => Plot.plot({
 })));
 ```
 
-<p class="note">The front month is the nearest contract to expiry; it switches to the next month a day or two before expiry, which can show as a step.</p>
+<p class="fine">The front month is the nearest contract to expiry; it switches to the next month a day or two before expiry, which can show as a step.</p>
 </div>
 <div class="card">
 <h3>Futures price by delivery month</h3>
@@ -183,7 +183,7 @@ ${peakRows.length ? html`<p class="callout"><b>Coming peak GAF period (${d3.utcF
 
 ## What moves the forecast
 
-<p class="note">Storage against its five-year norm is the clearest fundamental signal; the machine-learning model (LightGBM) leans mostly on recent price momentum and volatility.</p>
+<p class="fine">Storage against its five-year norm is the clearest fundamental signal; the machine-learning model (LightGBM) leans mostly on recent price momentum and volatility.</p>
 
 <div class="grid grid-cols-2">
 <div class="card">
@@ -213,9 +213,9 @@ display(resize((width) => Plot.plot({
 
 ```js
 display(resize((width) => {
-  const rows = D.shap.map((r) => ({f: (width < 520 ? SHORT_F : FEATURES)[r.f] ?? r.f, v: r.v}));
+  const rows = D.shap.map((r) => ({f: (width < 400 ? SHORT_F : FEATURES)[r.f] ?? r.f, v: r.v}));
   return Plot.plot({
-    width, height: 290, marginLeft: width < 520 ? 118 : 190, marginRight: 36, style: {fontSize: "12px"},
+    width, height: 290, marginLeft: width < 400 ? 118 : 190, marginRight: 36, style: {fontSize: "12px"},
     x: {grid: true, label: null, ticks: 4},
     y: {domain: rows.map((r) => r.f), label: null, tickSize: 0},
     marks: [
@@ -231,7 +231,7 @@ display(resize((width) => {
 
 ## Walk-forward scorecard
 
-<p class="note">Every model is refit each week using only data available at the time, then scored on the following weeks. Lower error is better; a p-value under 0.05 means the model beats “no change” by more than chance. Showing the ${horizon}-week horizon chosen above.</p>
+<p class="fine">Every model is refit each week using only data available at the time, then scored on the following weeks. Lower error is better; a p-value under 0.05 means the model beats “no change” by more than chance. Showing the ${horizon}-week horizon chosen above.</p>
 
 ```js
 display(html`<div class="tablewrap"><table class="plain">
@@ -241,5 +241,5 @@ display(html`<div class="tablewrap"><table class="plain">
     <td>${s.model === "Random walk" ? "–" : (s.vs_rw > 0 ? "+" : "") + s.vs_rw.toFixed(1) + "%"}</td>
     <td>${s.hit == null ? "–" : s.hit.toFixed(0) + "%"}</td><td>${s.p == null ? "–" : s.p.toFixed(2)}</td></tr>`)}</tbody>
 </table></div>
-<p class="note">Direction hit = share of weeks the model called the up/down move correctly. Data through ${fmtD(parse(D.price_data_through))} (spot) and ${fmtD(parse(D.strip_as_of))} (futures).</p>`);
+<p class="fine">Direction hit = share of weeks the model called the up/down move correctly. Data through ${fmtD(parse(D.price_data_through))} (spot) and ${fmtD(parse(D.strip_as_of))} (futures).</p>`);
 ```

@@ -61,7 +61,10 @@ h1, h2, h3 { font-family: var(--font-display); color: var(--ink); text-wrap: bal
 .events span { color: var(--muted); }
 .callout { border-left: 3px solid var(--peak); padding: 4px 0 4px 12px; font-size: .8125rem; color: var(--muted); }
 .callout b { color: var(--ink); font-weight: 600; }
-.note { font-size: .8125rem; color: var(--muted); }
+.fine { font-size: .8125rem; color: var(--muted); margin: .4rem 0; }
+#observablehq-sidebar { background: var(--bg); border-right: 1px solid var(--rule); }
+#observablehq-footer { color: var(--muted); font-size: .8125rem; }
+#observablehq-footer a { color: var(--accent); }
 .tablewrap { overflow-x: auto; }
 table.plain { border-collapse: collapse; width: 100%; font-size: .8125rem; max-width: none; }
 table.plain th, table.plain td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
