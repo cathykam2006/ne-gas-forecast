@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="generator" content="Observable Framework v1.13.4">
+<title>Henry Hub price outlook | New England Gas Forecast</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&amp;display=swap" crossorigin>
+<link rel="preload" as="style" href="./_import/style.c562cf49.css">
+<link rel="preload" as="style" href="./_observablehq/stdlib/inputs.f7bf0e12.css">
+<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&amp;display=swap" crossorigin>
+<link rel="stylesheet" type="text/css" href="./_import/style.c562cf49.css">
+<link rel="stylesheet" type="text/css" href="./_observablehq/stdlib/inputs.f7bf0e12.css">
+<link rel="modulepreload" href="./_observablehq/client.550996ed.js">
+<link rel="modulepreload" href="./_observablehq/runtime.13bc3751.js">
+<link rel="modulepreload" href="./_observablehq/stdlib.c4209144.js">
+<link rel="modulepreload" href="./_npm/d3@7.9.0/080cf928.js">
+<link rel="modulepreload" href="./_npm/htl@1.0.0/11521f02.js">
+<link rel="modulepreload" href="./_observablehq/stdlib/inputs.0cc910eb.js">
+<link rel="modulepreload" href="./_npm/@observablehq/plot@0.6.17/93ce672e.js">
+<link rel="modulepreload" href="./_npm/isoformat@0.2.1/604cb63b.js">
+<link rel="modulepreload" href="./_npm/d3-array@3.2.4/b8e751b6.js">
+<link rel="modulepreload" href="./_npm/d3-axis@3.0.0/c662ea05.js">
+<link rel="modulepreload" href="./_npm/d3-brush@3.0.0/d162d8c6.js">
+<link rel="modulepreload" href="./_npm/d3-chord@3.0.1/5cedd0be.js">
+<link rel="modulepreload" href="./_npm/d3-color@3.1.0/65d51007.js">
+<link rel="modulepreload" href="./_npm/d3-contour@4.0.2/c576a91a.js">
+<link rel="modulepreload" href="./_npm/d3-delaunay@6.0.4/8b43826d.js">
+<link rel="modulepreload" href="./_npm/d3-dispatch@3.0.1/3fb06f14.js">
+<link rel="modulepreload" href="./_npm/d3-drag@3.0.0/20b76948.js">
+<link rel="modulepreload" href="./_npm/d3-dsv@3.0.1/097745a2.js">
+<link rel="modulepreload" href="./_npm/d3-ease@3.0.1/8683b012.js">
+<link rel="modulepreload" href="./_npm/d3-fetch@3.0.1/5c319046.js">
+<link rel="modulepreload" href="./_npm/d3-force@3.0.0/33924f3e.js">
+<link rel="modulepreload" href="./_npm/d3-format@3.1.2/8d67a1ae.js">
+<link rel="modulepreload" href="./_npm/d3-geo@3.1.1/8037bd0b.js">
+<link rel="modulepreload" href="./_npm/d3-hierarchy@3.1.2/a9ba0229.js">
+<link rel="modulepreload" href="./_npm/d3-interpolate@3.0.1/e0a47f97.js">
+<link rel="modulepreload" href="./_npm/d3-path@3.1.0/f9e9e0ab.js">
+<link rel="modulepreload" href="./_npm/d3-polygon@3.0.1/2da8eb3b.js">
+<link rel="modulepreload" href="./_npm/d3-quadtree@3.0.1/09002e01.js">
+<link rel="modulepreload" href="./_npm/d3-random@3.0.1/5108797c.js">
+<link rel="modulepreload" href="./_npm/d3-scale@4.0.2/c9f2571b.js">
+<link rel="modulepreload" href="./_npm/d3-scale-chromatic@3.1.0/f3c78e0d.js">
+<link rel="modulepreload" href="./_npm/d3-selection@3.0.0/28717d05.js">
+<link rel="modulepreload" href="./_npm/d3-shape@3.2.0/7c6e2a50.js">
+<link rel="modulepreload" href="./_npm/d3-time@3.1.0/3d1d57c6.js">
+<link rel="modulepreload" href="./_npm/d3-time-format@4.1.0/643581a8.js">
+<link rel="modulepreload" href="./_npm/d3-timer@3.0.1/e99232db.js">
+<link rel="modulepreload" href="./_npm/d3-transition@3.0.1/bd07fd9a.js">
+<link rel="modulepreload" href="./_npm/d3-zoom@3.0.0/d09f7cc9.js">
+<link rel="modulepreload" href="./_npm/interval-tree-1d@1.0.4/f53f17b2.js">
+<link rel="modulepreload" href="./_npm/internmap@2.0.3/af036d7e.js">
+<link rel="modulepreload" href="./_npm/delaunator@5.1.0/7b06abe7.js">
+<link rel="modulepreload" href="./_npm/binary-search-bounds@2.0.5/5f640032.js">
+<link rel="modulepreload" href="./_npm/robust-predicates@3.0.3/b42f30a7.js">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&amp;family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<script type="module">
+
+import {define} from "./_observablehq/client.550996ed.js";
+import {registerFile} from "./_observablehq/stdlib.c4209144.js";
+
+registerFile("./data/henry-hub.json", {"name":"./data/henry-hub.json","mimeType":"application/json","path":"./_file/data/henry-hub.a1dfc254.json","lastModified":1793252386877,"size":79310});
+
+define({id: "d8d3d104", inputs: ["FileAttachment"], outputs: ["D"], body: (FileAttachment) => {
+const D = FileAttachment("./data/henry-hub.json").json();
+return {D};
+}});
+
+define({id: "006d0678", inputs: ["d3"], outputs: ["parse","fmtD","fmtMD","usd","FEATURES","SHORT_F","SHORT_E"], body: (d3) => {
+const parse = d3.utcParse("%Y-%m-%d");
+const fmtD = d3.utcFormat("%b %-d, %Y"), fmtMD = d3.utcFormat("%b %-d");
+const usd = (v, n = 2) => "$" + v.toFixed(n);
+const FEATURES = {vol_8: "Price volatility (8 wk)", ret_4: "Price change, last 4 wk", ret_13: "Price change, last 13 wk",
+  ret_1: "Price change, last week", lng_bcfd: "LNG exports (Bcf/d)", dd_anom: "Weather vs. normal (degree days)",
+  dd_anom_4: "Weather vs. normal, 4 wk", storage_surplus_pct: "Storage vs. 5-yr average", injection_vs_norm_bcf: "Storage injection vs. normal",
+  lng_yoy_pct: "LNG exports, year over year", sin_w: "Season (sine)", cos_w: "Season (cosine)"};
+const SHORT_F = {vol_8: "Volatility, 8 wk", ret_4: "Change, 4 wk", ret_13: "Change, 13 wk", ret_1: "Change, 1 wk",
+  lng_bcfd: "LNG exports", dd_anom: "Weather anomaly", dd_anom_4: "Weather, 4 wk", storage_surplus_pct: "Storage vs. norm",
+  injection_vs_norm_bcf: "Injection vs. norm", lng_yoy_pct: "LNG exports, y/y", sin_w: "Season (sin)", cos_w: "Season (cos)"};
+const SHORT_E = {"Winter Storm Fern": "Storm Fern", "Golden Pass LNG first cargo": "Golden Pass LNG", "Record-hot July": "Hot July",
+  "China 15% tariff on US LNG": "China LNG tariff", "Russia invades Ukraine": "Ukraine war", "Freeport LNG outage": "Freeport outage",
+  "Winter Storm Uri": "Storm Uri", "COVID-19 pandemic declared": "COVID-19"};
+return {parse,fmtD,fmtMD,usd,FEATURES,SHORT_F,SHORT_E};
+}});
+
+define({id: "f760d981", inputs: ["D","d3","parse","display","html","fmtMD","usd"], body: (D,d3,parse,display,html,fmtMD,usd) => {
+{
+  const L = D.h4.latest, sc = D.h4.scores.find((s) => s.model === D.h4.best);
+  const chg = (L.fcst / L.price_now - 1) * 100;
+  const dir = Math.abs(chg) < 1 ? "" : chg > 0 ? "up" : "down";
+  const frontMonth = d3.utcFormat("%b '%y")(parse(D.strip[0].m + "-01"));
+  display(html`<div class="kpis">
+    <div class="kpi"><div class="label">Henry Hub spot, week ending ${fmtMD(parse(L.as_of))}</div>
+      <div class="value">${usd(L.price_now)}<small>/MMBtu</small></div><div class="sub">Weekly average of daily spot prices</div></div>
+    <div class="kpi"><div class="label">4-week forecast, week of ${fmtMD(parse(L.target))}</div>
+      <div class="value">${usd(L.fcst)}<small>/MMBtu</small></div>
+      <span class="chip ${dir}">${chg >= 0 ? "+" : ""}${chg.toFixed(1)}% vs. now</span></div>
+    <div class="kpi"><div class="label">Forecast error vs. “no change”</div>
+      <div class="value">${sc.vs_rw.toFixed(1)}%</div>
+      <span class="chip">${sc.p < 0.05 ? "significant" : "not significant"} (p = ${sc.p.toFixed(2)})</span></div>
+    <div class="kpi"><div class="label">NYMEX front month (${frontMonth}), ${fmtMD(parse(D.strip_as_of))}</div>
+      <div class="value">${usd(D.front_last)}<small>/MMBtu</small></div><div class="sub">Market price for next month’s delivery</div></div>
+  </div>`);
+}
+}});
+
+define({id: "f16e11d3", inputs: ["view","Inputs"], outputs: ["ahead"], body: (view,Inputs) => {
+const ahead = view(Inputs.radio(["Next 12 months", "Next 24 months"], {value: "Next 12 months", label: "Look ahead"}));
+return {ahead};
+}});
+
+define({id: "6b9bf9af", inputs: ["D","parse","d3","ahead"], outputs: ["O","oHist","oPath","oLast","oEnd","oStart","oFut","oShown","p4"], body: (D,parse,d3,ahead) => {
+const O = D.outlook;
+const oHist = O.history.map((r) => ({d: parse(r.d), v: r.v}));
+const oPath = O.path.map((r) => ({...r, d: parse(r.d)}));
+const oLast = parse(O.last_date);
+const oEnd = d3.utcMonth.offset(oLast, ahead === "Next 12 months" ? 12 : 24);
+const oStart = d3.utcMonth.offset(oLast, -12);
+const oFut = O.futures.map((r) => ({...r, d: parse(r.d)})).filter((r) => r.d <= oEnd);
+const oShown = oHist.filter((r) => r.d >= oStart);
+const p4 = oPath.at(-1);
+return {O,oHist,oPath,oLast,oEnd,oStart,oFut,oShown,p4};
+}});
+
+define({id: "29ce4513", mode: "inline", inputs: ["O","display"], body: async (O,display) => {
+display(await(
+O.model
+))
+}});
+
+define({id: "89b64620", mode: "inline", inputs: ["O","display"], body: async (O,display) => {
+display(await(
+Math.round(O.level * 100)
+))
+}});
+
+define({id: "da60041a", inputs: ["display","resize","d3","oShown","oPath","oFut","Plot","oStart","oEnd","ahead","oLast","fmtMD","p4","fmtD","usd"], body: (display,resize,d3,oShown,oPath,oFut,Plot,oStart,oEnd,ahead,oLast,fmtMD,p4,fmtD,usd) => {
+display(resize((width) => {
+  const narrow = width < 560;
+  const q = (p) => d3.quantile(oShown, p, (r) => r.v);
+  const yMax = Math.max(d3.max(oPath, (r) => r.hi), d3.max(oFut, (r) => r.v) ?? 0, q(0.9)) * 1.25;
+  const yMin = Math.min(d3.min(oPath, (r) => r.lo), d3.min(oFut, (r) => r.v) ?? 1e9, q(0.05)) * 0.8;
+  const peak = d3.greatest(oShown, (r) => r.v);
+  const clip = (v) => Math.min(v, yMax);
+  const today = new Date();
+  return Plot.plot({
+    width, height: narrow ? 320 : 400, marginLeft: 46, marginTop: 30, marginRight: 12, style: {fontSize: "12px"},
+    x: {type: "utc", domain: [oStart, d3.utcDay.offset(oEnd, 10)], label: null,
+        ticks: d3.utcMonth.every(narrow ? 6 : ahead === "Next 12 months" ? 2 : 3),
+        tickFormat: (d) => narrow ? d3.utcFormat("%b '%y")(d) : d3.utcFormat(d.getUTCMonth() === 0 ? "%b %Y" : "%b")(d)},
+    y: {domain: [yMin, yMax], grid: true, label: "$/MMBtu", labelArrow: "none", tickFormat: (d) => "$" + d.toFixed(d % 1 ? 1 : 0), clamp: true},
+    marks: [
+      Plot.rectX([{}], {x1: oLast, x2: oEnd, y1: yMin, y2: yMax, fill: "var(--fc-wash)"}),
+      Plot.ruleX([oLast], {stroke: "var(--muted)", strokeDasharray: "2,3"}),
+      narrow ? null : Plot.text([`Latest actual · ${fmtMD(oLast)}`], {x: oLast, frameAnchor: "top", dy: -20, dx: -6, textAnchor: "end", fill: "var(--muted)", fontSize: 11}),
+      Plot.text(["FORECAST →"], {x: oLast, frameAnchor: "top", dy: -20, dx: 6, textAnchor: "start", fill: "var(--accent)", fontWeight: 700, fontSize: 11}),
+      today > oLast && today < oEnd ? Plot.ruleX([today], {stroke: "var(--rule)"}) : null,
+      today > oLast && today < oEnd ? Plot.text(["Today"], {x: today, frameAnchor: "bottom", dy: -4, dx: 3, textAnchor: "start", fill: "var(--muted)", fontSize: 10}) : null,
+      Plot.areaY(oPath, {x: "d", y1: "lo", y2: (r) => clip(r.hi), fill: "var(--fc-band)", curve: "linear"}),
+      Plot.lineY(oShown, {x: "d", y: (r) => clip(r.v), stroke: "var(--ink)", strokeWidth: 2}),
+      peak.v > yMax ? Plot.text([peak], {x: "d", y: yMax, text: (r) => `↑ $${r.v.toFixed(2)} week of ${fmtMD(r.d)} (off scale)`,
+        textAnchor: "start", dx: 6, dy: 8, fill: "var(--muted)", fontSize: 11}) : null,
+      Plot.lineY(oPath, {x: "d", y: "f", stroke: "var(--accent)", strokeWidth: 3.2, strokeDasharray: "7,5"}),
+      Plot.dot(oPath.filter((r) => r.h > 0), {x: "d", y: "f", r: 5.5, fill: "var(--surface)", stroke: "var(--accent)", strokeWidth: 2.5}),
+      Plot.text([p4], {x: "d", y: "hi", text: (r) => `Model: $${r.f.toFixed(2)} in ${r.h} wk`, dy: -12, textAnchor: "middle",
+        fill: "var(--accent)", fontWeight: 700, fontSize: 12, stroke: "var(--surface)", strokeWidth: 4, paintOrder: "stroke"}),
+      Plot.lineY(oFut, {x: "d", y: "v", stroke: "var(--futures)", strokeWidth: 2, strokeDasharray: "2,4", curve: "catmull-rom"}),
+      Plot.dot(oFut, {x: "d", y: "v", symbol: "diamond", r: 4.5, fill: "var(--futures)"}),
+      oFut.length ? Plot.text([oFut[0]], {x: "d", y: "v", text: () => "NYMEX futures", dy: 18, dx: 6, textAnchor: "start",
+        fill: "var(--futures)", fontWeight: 600, fontSize: 11}) : null,
+      Plot.tip([...oShown.map((r) => ({...r, kind: "Actual"})), ...oPath.filter((r) => r.h > 0).map((r) => ({d: r.d, v: r.f, lo: r.lo, hi: r.hi, h: r.h, kind: "Model"})),
+                ...oFut.map((r) => ({...r, kind: "Futures"}))],
+        Plot.pointerX({x: "d", y: (r) => clip(r.v), title: (r) => r.kind === "Actual" ? `Week ending ${fmtD(r.d)}\nActual: ${usd(r.v)}`
+          : r.kind === "Model" ? `${fmtD(r.d)}: ${r.h}-week forecast\n${usd(r.v)} (likely ${usd(r.lo)}–${usd(r.hi)})`
+          : `${d3.utcFormat("%B %Y")(r.d)} futures contract\n${usd(r.v, 3)}/MMBtu`}))
+    ].filter(Boolean)
+  });
+}));
+}});
+
+define({id: "9477cd66", mode: "inline", inputs: ["fmtD","oLast","display"], body: async (fmtD,oLast,display) => {
+display(await(
+fmtD(oLast)
+))
+}});
+
+define({id: "29ce4513-1", mode: "inline", inputs: ["O","display"], body: async (O,display) => {
+display(await(
+O.model
+))
+}});
+
+define({id: "89b64620-1", mode: "inline", inputs: ["O","display"], body: async (O,display) => {
+display(await(
+Math.round(O.level * 100)
+))
+}});
+
+define({id: "2f83fa56", mode: "inline", inputs: ["O","fmtMD","parse","display"], body: async (O,fmtMD,parse,display) => {
+display(await(
+O.futures_as_of ? `, as of ${fmtMD(parse(O.futures_as_of))}` : ""
+))
+}});
+
+define({id: "dc3804a7", inputs: ["view","Inputs"], outputs: ["horizon"], body: (view,Inputs) => {
+const horizon = view(Inputs.radio(new Map([["4 weeks ahead", 4], ["1 week ahead", 1]]), {value: 4, label: "Horizon"}));
+return {horizon};
+}});
+
+define({id: "5efeb97e", inputs: ["view","Inputs"], outputs: ["period"], body: (view,Inputs) => {
+const period = view(Inputs.radio(["Latest 12 months", "Since 2020"], {value: "Latest 12 months", label: "Period"}));
+return {period};
+}});
+
+define({id: "166e8d6a", inputs: ["D","horizon","period","parse","d3"], outputs: ["H","recent","rowsAll","fcEnd","fcStart","fcRows","periods","pointEvents","eventLabels"], body: (D,horizon,period,parse,d3) => {
+const H = D["h" + horizon];
+const recent = period === "Latest 12 months";
+const rowsAll = H.rows.map((r) => ({...r, t: parse(r.t)}));
+const fcEnd = rowsAll.at(-1).t;
+const fcStart = recent ? d3.utcMonth.offset(fcEnd, -12) : rowsAll[0].t;
+const fcRows = rowsAll.filter((r) => r.t >= fcStart);
+const periods = D.periods.map((p) => ({...p, a: parse(p.a), b: parse(p.b)}))
+  .filter((p) => p.b >= fcStart && p.a <= fcEnd && (p.b - p.a) / 864e5 >= 7);
+const pointEvents = D.events.map((e) => ({...e, t: parse(e.d)}))
+  .filter((e) => e.t >= fcStart && e.t <= fcEnd && !periods.some((p) => p.label === e.label));
+const eventLabels = [...pointEvents.map((e) => ({t: e.t, label: e.label})), ...periods.map((p) => ({t: p.a, label: p.label}))]
+  .sort((a, b) => a.t - b.t).map((d, i) => ({...d, row: i % 2}));
+return {H,recent,rowsAll,fcEnd,fcStart,fcRows,periods,pointEvents,eventLabels};
+}});
+
+define({id: "9a6d4c08", mode: "inline", inputs: ["fmtD","fcStart","display"], body: async (fmtD,fcStart,display) => {
+display(await(
+fmtD(fcStart)
+))
+}});
+
+define({id: "c4d70b5d", mode: "inline", inputs: ["fmtD","fcEnd","display"], body: async (fmtD,fcEnd,display) => {
+display(await(
+fmtD(fcEnd)
+))
+}});
+
+define({id: "4726a1bc", mode: "inline", inputs: ["horizon","display"], body: async (horizon,display) => {
+display(await(
+horizon
+))
+}});
+
+define({id: "03ee7870", mode: "inline", inputs: ["horizon","display"], body: async (horizon,display) => {
+display(await(
+horizon > 1 ? "s" : ""
+))
+}});
+
+define({id: "002af090", mode: "inline", inputs: ["H","display"], body: async (H,display) => {
+display(await(
+H.best
+))
+}});
+
+define({id: "4726a1bc-1", mode: "inline", inputs: ["horizon","display"], body: async (horizon,display) => {
+display(await(
+horizon
+))
+}});
+
+define({id: "03ee7870-1", mode: "inline", inputs: ["horizon","display"], body: async (horizon,display) => {
+display(await(
+horizon > 1 ? "s" : ""
+))
+}});
+
+define({id: "ed51dab8", mode: "inline", inputs: ["eventLabels","html","display"], body: async (eventLabels,html,display) => {
+display(await(
+eventLabels.length ? html`<span><i class="sw" style="border-color:var(--event);border-top-style:dashed"></i>Market event</span>` : ""
+))
+}});
+
+define({id: "ca82ccec", inputs: ["display","resize","recent","d3","fcRows","eventLabels","SHORT_E","Plot","fcStart","fcEnd","periods","pointEvents","fmtD","usd","fmtMD","parse"], body: (display,resize,recent,d3,fcRows,eventLabels,SHORT_E,Plot,fcStart,fcEnd,periods,pointEvents,fmtD,usd,fmtMD,parse) => {
+display(resize((width) => {
+  const narrow = width < 560, tight = narrow || !recent;
+  const yMax = d3.max(fcRows, (r) => Math.max(r.actual, r.fcst)) * 1.12;
+  const labels = eventLabels.map((d) => ({...d, text: tight ? (SHORT_E[d.label] ?? d.label) : d.label}));
+  return Plot.plot({
+    width, height: narrow ? 300 : 380, marginLeft: 44, marginTop: 34, marginRight: 8,
+    style: {fontSize: "12px"},
+    x: {type: "utc", domain: [fcStart, fcEnd], label: null,
+        ticks: recent ? d3.utcMonth.every(narrow ? 2 : 1) : d3.utcYear.every(1),
+        tickFormat: recent ? (d) => d3.utcFormat(d.getUTCMonth() === 0 ? "%b %Y" : "%b")(d) : "%Y"},
+    y: {domain: [0, yMax], grid: true, label: "$/MMBtu", labelArrow: "none", tickFormat: (d) => "$" + d},
+    marks: [
+      Plot.rectX(periods, {x1: "a", x2: "b", y1: 0, y2: yMax, fill: "var(--event-wash)"}),
+      Plot.ruleX(pointEvents, {x: "t", stroke: "var(--event)", strokeDasharray: "3,3", strokeWidth: 1.2}),
+      ...[0, 1].map((row) => Plot.text(labels.filter((d) => d.row === row), {x: "t", y: yMax, dy: -24 + row * 14, text: "text",
+        textAnchor: "start", dx: 4, fill: "var(--event)", fontWeight: 600, fontSize: narrow ? 10.5 : 11.5, lineAnchor: "top"})),
+      Plot.lineY(fcRows, {x: "t", y: "actual", stroke: "var(--actual)", strokeWidth: recent ? 2 : 1.4, curve: "monotone-x"}),
+      Plot.lineY(fcRows, {x: "t", y: "fcst", stroke: "var(--accent)", strokeWidth: recent ? 2.2 : 1.4, curve: "monotone-x"}),
+      recent ? Plot.dot(fcRows, {x: "t", y: "actual", r: 2.4, fill: "var(--actual)"}) : null,
+      recent ? Plot.dot(fcRows, {x: "t", y: "fcst", r: 2.4, fill: "var(--accent)"}) : null,
+      Plot.dot(fcRows.slice(-1), {x: "t", y: "actual", r: 4.5, fill: "var(--surface)", stroke: "var(--actual)", strokeWidth: 2}),
+      Plot.ruleX(fcRows, Plot.pointerX({x: "t", stroke: "var(--rule)"})),
+      Plot.tip(fcRows, Plot.pointerX({x: "t", y: "actual", title: (r) =>
+        `Week ending ${fmtD(r.t)}\nActual: ${usd(r.actual)}\nForecast: ${usd(r.fcst)} (made ${fmtMD(parse(r.made))})`}))
+    ].filter(Boolean)
+  });
+}));
+}});
+
+define({id: "c992074d", inputs: ["display","html","eventLabels","D"], body: (display,html,eventLabels,D) => {
+display(html`<ul class="events">${[...new Set(eventLabels.map((l) => l.label))].filter((l) => D.notes[l])
+  .map((l) => html`<li><b>${l}</b><span>${D.notes[l]}</span></li>`)}</ul>`);
+}});
+
+define({id: "bbdc960f", mode: "inline", inputs: ["fmtD","parse","D","display"], body: async (fmtD,parse,D,display) => {
+display(await(
+fmtD(parse(D.strip_as_of))
+))
+}});
+
+define({id: "e0aeff72", inputs: ["D","parse","d3"], outputs: ["front","strip","asOf","peakYear","peakRows","peakAvg"], body: (D,parse,d3) => {
+const front = D.front.map((r) => ({...r, d: parse(r.d)}));
+const strip = D.strip.map((r) => {
+  const d = parse(r.m + "-01"), m = d.getUTCMonth();
+  return {...r, d, peak: m >= 10 || m <= 3, lab: d3.utcFormat("%b %y")(d)};
+});
+const asOf = parse(D.strip_as_of);
+const peakYear = asOf.getUTCMonth() <= 3 ? asOf.getUTCFullYear() - 1 : asOf.getUTCFullYear();
+const peakRows = strip.filter((r) => r.d >= Date.UTC(peakYear, 10, 1) && r.d <= Date.UTC(peakYear + 1, 3, 1));
+const peakAvg = d3.mean(peakRows, (r) => r.p);
+return {front,strip,asOf,peakYear,peakRows,peakAvg};
+}});
+
+define({id: "1841d04f", inputs: ["display","resize","Plot","front","fmtD","usd"], body: (display,resize,Plot,front,fmtD,usd) => {
+display(resize((width) => Plot.plot({
+  width, height: 280, marginLeft: 40, marginRight: 8, style: {fontSize: "12px"},
+  x: {type: "utc", ticks: width < 420 ? 3 : 5, label: null},
+  y: {type: "log", grid: true, label: "$/MMBtu (log scale)", labelArrow: "none", ticks: [2, 3, 5, 10, 20, 30], tickFormat: (d) => "$" + d},
+  marks: [
+    Plot.lineY(front.filter((r) => r.spot != null), {x: "d", y: "spot", stroke: "var(--actual)", strokeWidth: 1.1, strokeOpacity: 0.85}),
+    Plot.lineY(front.filter((r) => r.front != null), {x: "d", y: "front", stroke: "var(--accent)", strokeWidth: 1.8}),
+    Plot.tip(front, Plot.pointerX({x: "d", y: "front", title: (r) =>
+      `${fmtD(r.d)}\nFront month: ${r.front != null ? usd(r.front, 3) : "–"}\nSpot: ${r.spot != null ? usd(r.spot) : "–"}`}))
+  ]
+})));
+}});
+
+define({id: "633813a9", inputs: ["display","resize","Plot","strip","d3","usd"], body: (display,resize,Plot,strip,d3,usd) => {
+display(resize((width) => Plot.plot({
+  width, height: 280, marginLeft: 40, marginRight: 4, marginBottom: 34, style: {fontSize: "11px"},
+  x: {type: "band", domain: strip.map((r) => r.lab), padding: 0.18, label: null,
+      tickFormat: (d, i) => (i % (width < 480 ? 6 : 3) === 0 ? d.replace(" ", " '") : "")},
+  y: {grid: true, label: "$/MMBtu", labelArrow: "none", tickFormat: (d) => "$" + d},
+  marks: [
+    Plot.barY(strip, {x: "lab", y: "p", fill: (r) => (r.peak ? "var(--peak)" : "var(--rule)"), rx: 1}),
+    Plot.ruleY([0], {stroke: "var(--muted)"}),
+    Plot.tip(strip, Plot.pointerX({x: "lab", y: "p", title: (r) =>
+      `${d3.utcFormat("%B %Y")(r.d)}\n${usd(r.p, 3)}/MMBtu · ${usd(r.p / 10, 4)}/therm${r.peak ? "\nPeak GAF period" : ""}`}))
+  ]
+})));
+}});
+
+define({id: "04a81282", mode: "inline", inputs: ["peakRows","html","d3","peakYear","usd","peakAvg","display"], body: async (peakRows,html,d3,peakYear,usd,peakAvg,display) => {
+display(await(
+peakRows.length ? html`<p class="callout"><b>Coming peak GAF period (${d3.utcFormat("%b")(peakRows[0].d)} ${peakYear}–Apr ${peakYear + 1}):</b> futures average <span class="num">${usd(peakAvg, 3)}</span>/MMBtu, or <span class="num">${usd(peakAvg / 10, 4)}</span>/therm, before pipeline, storage and delivery costs into New England.</p>` : ""
+))
+}});
+
+define({id: "8949fb50", inputs: ["D","parse","display","resize","Plot","d3","fmtD"], outputs: ["storage"], body: (D,parse,display,resize,Plot,d3,fmtD) => {
+const storage = D.storage.map((r) => ({...r, d: parse(r.d)}));
+display(resize((width) => Plot.plot({
+  width, height: 260, marginLeft: 40, marginRight: 8, style: {fontSize: "12px"},
+  x: {type: "utc", ticks: width < 420 ? 3 : 4, label: null},
+  y: {grid: true, label: "% vs. 5-yr average", labelArrow: "none", tickFormat: (d) => (d > 0 ? "+" : "") + d + "%"},
+  marks: [
+    Plot.rectY(storage, {x1: (d) => d3.utcDay.offset(d.d, -3), x2: (d) => d3.utcDay.offset(d.d, 3), y: "v",
+      fill: (d) => (d.v >= 0 ? "var(--pos)" : "var(--neg)")}),
+    Plot.ruleY([0], {stroke: "var(--muted)"}),
+    Plot.tip(storage, Plot.pointerX({x: "d", y: "v", title: (r) =>
+      `Week ending ${fmtD(r.d)}\n${r.v > 0 ? "+" : ""}${r.v.toFixed(1)}% vs. 5-year average`}))
+  ]
+})));
+return {storage};
+}});
+
+define({id: "ef97ef07", inputs: ["display","resize","D","SHORT_F","FEATURES","Plot"], body: (display,resize,D,SHORT_F,FEATURES,Plot) => {
+display(resize((width) => {
+  const rows = D.shap.map((r) => ({f: (width < 400 ? SHORT_F : FEATURES)[r.f] ?? r.f, v: r.v}));
+  return Plot.plot({
+    width, height: 290, marginLeft: width < 400 ? 118 : 190, marginRight: 36, style: {fontSize: "12px"},
+    x: {grid: true, label: null, ticks: 4},
+    y: {domain: rows.map((r) => r.f), label: null, tickSize: 0},
+    marks: [
+      Plot.barX(rows, {y: "f", x: "v", fill: (d, i) => (i < 3 ? "var(--accent)" : "var(--rule)"), rx: 1}),
+      Plot.text(rows, {y: "f", x: "v", text: (d) => d.v.toFixed(1), dx: 5, textAnchor: "start", fill: "var(--muted)", fontSize: 11})
+    ]
+  });
+}));
+}});
+
+define({id: "4726a1bc-2", mode: "inline", inputs: ["horizon","display"], body: async (horizon,display) => {
+display(await(
+horizon
+))
+}});
+
+define({id: "384ab73b", inputs: ["display","html","H","fmtD","parse","D"], body: (display,html,H,fmtD,parse,D) => {
+display(html`<div class="tablewrap"><table class="plain">
+  <thead><tr><th>Model</th><th>Avg. error ($/MMBtu)</th><th>Error vs. “no change”</th><th>Direction hit</th><th>p-value</th></tr></thead>
+  <tbody>${H.scores.slice().sort((a, b) => a.rmse - b.rmse).map((s) => html`<tr class=${s.model === H.best ? "hl" : ""}>
+    <td>${s.model === "Random walk" ? "No change (random walk)" : s.model}</td><td>${s.rmse.toFixed(2)}</td>
+    <td>${s.model === "Random walk" ? "–" : (s.vs_rw > 0 ? "+" : "") + s.vs_rw.toFixed(1) + "%"}</td>
+    <td>${s.hit == null ? "–" : s.hit.toFixed(0) + "%"}</td><td>${s.p == null ? "–" : s.p.toFixed(2)}</td></tr>`)}</tbody>
+</table></div>
+<p class="fine">Direction hit = share of weeks the model called the up/down move correctly. Data through ${fmtD(parse(D.price_data_through))} (spot) and ${fmtD(parse(D.strip_as_of))} (futures).</p>`);
+}});
+
+</script>
+</head>
+<body>
+<input id="observablehq-sidebar-toggle" type="checkbox" title="Toggle sidebar">
+<label id="observablehq-sidebar-backdrop" for="observablehq-sidebar-toggle"></label>
+<nav id="observablehq-sidebar">
+  <ol>
+    <label id="observablehq-sidebar-close" for="observablehq-sidebar-toggle"></label>
+    <li class="observablehq-link observablehq-link-active"><a href="./">New England Gas Forecast</a></li>
+  </ol>
+  <ol>
+    <li class="observablehq-link observablehq-link-active"><a href="./">Henry Hub price outlook</a></li>
+    <li class="observablehq-link"><a href="./massachusetts-demand">Massachusetts demand</a></li>
+    <li class="observablehq-link"><a href="./massachusetts-gaf">Massachusetts GAF</a></li>
+  </ol>
+</nav>
+<script>{const e=document.querySelector("#observablehq-sidebar"),o=document.querySelector("#observablehq-sidebar-toggle"),r=sessionStorage.getItem("observablehq-sidebar");r?o.checked=r==="true":o.indeterminate=!0;for(const t of document.querySelectorAll("#observablehq-sidebar summary")){const s=t.parentElement;switch(sessionStorage.getItem(`observablehq-sidebar:${t.textContent}`)){case"true":s.open=!0;break;case"false":s.classList.contains("observablehq-section-active")||(s.open=!1);break}}addEventListener("beforeunload",()=>sessionStorage.setItem("observablehq-sidebar-scrolly",`${e.scrollTop}`));const a=sessionStorage.getItem("observablehq-sidebar-scrolly");a!=null&&(e.style.cssText="overflow: hidden;",e.scrollTop=+a,e.style.cssText="");}</script>
+<div id="observablehq-center">
+<main id="observablehq-main" class="observablehq">
+<div class="eyebrow">New England gas forecast · Henry Hub</div>
+<h1 id="henry-hub-price-outlook" tabindex="-1"><a class="observablehq-header-anchor" href="#henry-hub-price-outlook">Henry Hub Price Outlook</a></h1>
+<p class="lede">Weekly forecasts of the U.S. benchmark natural gas price at Henry Hub, Louisiana, checked against what the price actually did, next to what the NYMEX futures market expects. This is the national wholesale price, not a New England or utility rate; see <a href="./massachusetts-gaf">Massachusetts GAF</a> for what each company charges.</p>
+<div class="observablehq observablehq--block"><!--:d8d3d104:--></div>
+<div class="observablehq observablehq--block"><!--:006d0678:--></div>
+<div class="observablehq observablehq--block"><!--:f760d981:--></div>
+<h2 id="where-the-price-is-headed" tabindex="-1"><a class="observablehq-header-anchor" href="#where-the-price-is-headed">Where the price is headed</a></h2>
+<div class="controls">
+<div class="observablehq observablehq--block"><!--:f16e11d3:--></div>
+</div>
+<div class="observablehq observablehq--block"><!--:6b9bf9af:--></div>
+<div class="card">
+<div class="legend"><span><i class="sw" style="border-color:var(--ink)"></i>Actual (weekly average)</span><span><i class="sw" style="border-color:var(--accent);border-top-style:dashed;border-top-width:3px"></i>Model forecast · <observablehq-loading></observablehq-loading><!--:29ce4513:--></span><span><i class="sw box" style="background:var(--fc-band)"></i>Likely range (<observablehq-loading></observablehq-loading><!--:89b64620:-->%)</span><span><i class="sw" style="border-color:var(--futures);border-top-style:dotted;border-top-width:3px"></i>NYMEX futures (market forecast)</span></div>
+<div class="observablehq observablehq--block"><!--:da60041a:--></div>
+</div>
+<p class="fine">Solid line: actual weekly price through <observablehq-loading></observablehq-loading><!--:9477cd66:-->. Dashed blue: the <observablehq-loading></observablehq-loading><!--:29ce4513-1:--> model’s 1- and 4-week forecasts, with the range that held <observablehq-loading></observablehq-loading><!--:89b64620-1:-->% of the time in its walk-forward backtest. Dotted green: NYMEX futures by delivery month<observablehq-loading></observablehq-loading><!--:2f83fa56:-->, the price the market will lock in today for each future month.</p>
+<h2 id="forecast-track-record" tabindex="-1"><a class="observablehq-header-anchor" href="#forecast-track-record">Forecast track record</a></h2>
+<p class="fine">How the model's past forecasts compared with what actually happened.</p>
+<div class="controls">
+<div class="observablehq observablehq--block"><!--:dc3804a7:--></div>
+<div class="observablehq observablehq--block"><!--:5efeb97e:--></div>
+</div>
+<div class="observablehq observablehq--block"><!--:166e8d6a:--></div>
+<p class="fine"><observablehq-loading></observablehq-loading><!--:9a6d4c08:--> – <observablehq-loading></observablehq-loading><!--:c4d70b5d:-->. Each point is the week the forecast was for, so the blue line shows what the model predicted <observablehq-loading></observablehq-loading><!--:4726a1bc:--> week<observablehq-loading></observablehq-loading><!--:03ee7870:--> earlier. Events are context, not model inputs.</p>
+<div class="card">
+<div class="legend"><span><i class="sw" style="border-color:var(--actual)"></i>Actual price (weekly average)</span><span><i class="sw" style="border-color:var(--accent)"></i><observablehq-loading></observablehq-loading><!--:002af090:--> forecast, made <observablehq-loading></observablehq-loading><!--:4726a1bc-1:--> week<observablehq-loading></observablehq-loading><!--:03ee7870-1:--> earlier</span><observablehq-loading></observablehq-loading><!--:ed51dab8:--></div>
+<div class="observablehq observablehq--block"><!--:ca82ccec:--></div>
+</div>
+<div class="observablehq observablehq--block"><!--:c992074d:--></div>
+<h2 id="what-the-futures-market-expects" tabindex="-1"><a class="observablehq-header-anchor" href="#what-the-futures-market-expects">What the futures market expects</a></h2>
+<p class="fine">CME NYMEX Henry Hub contracts, daily close. Settlements as of <observablehq-loading></observablehq-loading><!--:bbdc960f:-->.</p>
+<div class="observablehq observablehq--block"><!--:e0aeff72:--></div>
+<div class="grid grid-cols-2">
+<div class="card">
+<h3>Front-month futures vs. spot, last 2 years</h3>
+<div class="legend"><span><i class="sw" style="border-color:var(--accent)"></i>NYMEX front month</span><span><i class="sw" style="border-color:var(--actual)"></i>Henry Hub spot (EIA)</span></div>
+<div class="observablehq observablehq--block"><!--:1841d04f:--></div>
+<p class="fine">The front month is the nearest contract to expiry; it switches to the next month a day or two before expiry, which can show as a step.</p>
+</div>
+<div class="card">
+<h3>Futures price by delivery month</h3>
+<div class="legend"><span><i class="sw box" style="background:var(--peak)"></i>Peak GAF period (Nov–Apr)</span><span><i class="sw box" style="background:var(--rule)"></i>Off-peak months</span></div>
+<div class="observablehq observablehq--block"><!--:633813a9:--></div>
+<p><observablehq-loading></observablehq-loading><!--:04a81282:--></p>
+</div>
+</div>
+<h2 id="what-moves-the-forecast" tabindex="-1"><a class="observablehq-header-anchor" href="#what-moves-the-forecast">What moves the forecast</a></h2>
+<p class="fine">Storage against its five-year norm is the clearest fundamental signal; the machine-learning model (LightGBM) leans mostly on recent price momentum and volatility.</p>
+<div class="grid grid-cols-2">
+<div class="card">
+<h3>Lower 48 storage vs. prior 5-year average</h3>
+<div class="legend"><span><i class="sw box" style="background:var(--pos)"></i>Above average (looser market)</span><span><i class="sw box" style="background:var(--neg)"></i>Below average (tighter)</span></div>
+<div class="observablehq observablehq--block"><!--:8949fb50:--></div>
+</div>
+<div class="card">
+<h3>Average influence on the 4-week forecast</h3>
+<div class="legend"><span>Mean |SHAP|, percentage points of 4-week price change (LightGBM)</span></div>
+<div class="observablehq observablehq--block"><!--:ef97ef07:--></div>
+</div>
+</div>
+<h2 id="walk-forward-scorecard" tabindex="-1"><a class="observablehq-header-anchor" href="#walk-forward-scorecard">Walk-forward scorecard</a></h2>
+<p class="fine">Every model is refit each week using only data available at the time, then scored on the following weeks. Lower error is better; a p-value under 0.05 means the model beats “no change” by more than chance. Showing the <observablehq-loading></observablehq-loading><!--:4726a1bc-2:-->-week horizon chosen above.</p>
+<div class="observablehq observablehq--block"><!--:384ab73b:--></div>
+</main>
+<footer id="observablehq-footer">
+<div>Data: EIA (Henry Hub spot, storage, LNG exports), CME NYMEX via Yahoo Finance (futures), Massachusetts DPU (GAF/LDAF), NOAA (weather).
+Source code: <a href="https://github.com/cathykam2006/ne-gas-forecast" target="_blank" rel="noopener noreferrer">github.com/cathykam2006/ne-gas-forecast</a>.</div>
+</footer>
+</div>
+</body>
+</html>

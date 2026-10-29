@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="generator" content="Observable Framework v1.13.4">
+<title>Massachusetts demand | New England Gas Forecast</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&amp;display=swap" crossorigin>
+<link rel="preload" as="style" href="./_import/style.c562cf49.css">
+<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&amp;display=swap" crossorigin>
+<link rel="stylesheet" type="text/css" href="./_import/style.c562cf49.css">
+<link rel="modulepreload" href="./_observablehq/client.550996ed.js">
+<link rel="modulepreload" href="./_observablehq/runtime.13bc3751.js">
+<link rel="modulepreload" href="./_observablehq/stdlib.c4209144.js">
+<link rel="modulepreload" href="./_npm/d3@7.9.0/080cf928.js">
+<link rel="modulepreload" href="./_npm/htl@1.0.0/11521f02.js">
+<link rel="modulepreload" href="./_npm/@observablehq/plot@0.6.17/93ce672e.js">
+<link rel="modulepreload" href="./_npm/d3-array@3.2.4/b8e751b6.js">
+<link rel="modulepreload" href="./_npm/d3-axis@3.0.0/c662ea05.js">
+<link rel="modulepreload" href="./_npm/d3-brush@3.0.0/d162d8c6.js">
+<link rel="modulepreload" href="./_npm/d3-chord@3.0.1/5cedd0be.js">
+<link rel="modulepreload" href="./_npm/d3-color@3.1.0/65d51007.js">
+<link rel="modulepreload" href="./_npm/d3-contour@4.0.2/c576a91a.js">
+<link rel="modulepreload" href="./_npm/d3-delaunay@6.0.4/8b43826d.js">
+<link rel="modulepreload" href="./_npm/d3-dispatch@3.0.1/3fb06f14.js">
+<link rel="modulepreload" href="./_npm/d3-drag@3.0.0/20b76948.js">
+<link rel="modulepreload" href="./_npm/d3-dsv@3.0.1/097745a2.js">
+<link rel="modulepreload" href="./_npm/d3-ease@3.0.1/8683b012.js">
+<link rel="modulepreload" href="./_npm/d3-fetch@3.0.1/5c319046.js">
+<link rel="modulepreload" href="./_npm/d3-force@3.0.0/33924f3e.js">
+<link rel="modulepreload" href="./_npm/d3-format@3.1.2/8d67a1ae.js">
+<link rel="modulepreload" href="./_npm/d3-geo@3.1.1/8037bd0b.js">
+<link rel="modulepreload" href="./_npm/d3-hierarchy@3.1.2/a9ba0229.js">
+<link rel="modulepreload" href="./_npm/d3-interpolate@3.0.1/e0a47f97.js">
+<link rel="modulepreload" href="./_npm/d3-path@3.1.0/f9e9e0ab.js">
+<link rel="modulepreload" href="./_npm/d3-polygon@3.0.1/2da8eb3b.js">
+<link rel="modulepreload" href="./_npm/d3-quadtree@3.0.1/09002e01.js">
+<link rel="modulepreload" href="./_npm/d3-random@3.0.1/5108797c.js">
+<link rel="modulepreload" href="./_npm/d3-scale@4.0.2/c9f2571b.js">
+<link rel="modulepreload" href="./_npm/d3-scale-chromatic@3.1.0/f3c78e0d.js">
+<link rel="modulepreload" href="./_npm/d3-selection@3.0.0/28717d05.js">
+<link rel="modulepreload" href="./_npm/d3-shape@3.2.0/7c6e2a50.js">
+<link rel="modulepreload" href="./_npm/d3-time@3.1.0/3d1d57c6.js">
+<link rel="modulepreload" href="./_npm/d3-time-format@4.1.0/643581a8.js">
+<link rel="modulepreload" href="./_npm/d3-timer@3.0.1/e99232db.js">
+<link rel="modulepreload" href="./_npm/d3-transition@3.0.1/bd07fd9a.js">
+<link rel="modulepreload" href="./_npm/d3-zoom@3.0.0/d09f7cc9.js">
+<link rel="modulepreload" href="./_npm/isoformat@0.2.1/604cb63b.js">
+<link rel="modulepreload" href="./_npm/interval-tree-1d@1.0.4/f53f17b2.js">
+<link rel="modulepreload" href="./_npm/internmap@2.0.3/af036d7e.js">
+<link rel="modulepreload" href="./_npm/delaunator@5.1.0/7b06abe7.js">
+<link rel="modulepreload" href="./_npm/binary-search-bounds@2.0.5/5f640032.js">
+<link rel="modulepreload" href="./_npm/robust-predicates@3.0.3/b42f30a7.js">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&amp;family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<script type="module">
+
+import {define} from "./_observablehq/client.550996ed.js";
+import {registerFile} from "./_observablehq/stdlib.c4209144.js";
+
+registerFile("./data/ma-demand.json", {"name":"./data/ma-demand.json","mimeType":"application/json","path":"./_file/data/ma-demand.b6f5192f.json","lastModified":1793252387138,"size":1792});
+
+define({id: "776c607f", inputs: ["FileAttachment"], outputs: ["M"], body: (FileAttachment) => {
+const M = FileAttachment("./data/ma-demand.json").json();
+return {M};
+}});
+
+define({id: "59a50031", inputs: ["d3","M"], outputs: ["pm","fmtMon","fmtMonth","hist","fc","last","lastV","now","thisMonth","cur","winter","wN","wC","wW","peak"], body: (d3,M) => {
+const pm = d3.utcParse("%Y-%m");
+const fmtMon = d3.utcFormat("%b %Y"), fmtMonth = d3.utcFormat("%B %Y");
+const hist = M.history.map((r) => ({d: pm(r.m), v: r.v}));
+const fc = M.forecast.map((r) => ({...r, d: pm(r.m)}));
+const last = pm(M.last_actual);
+const lastV = hist.at(-1).v;
+const now = new Date(), thisMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+const cur = fc.find((r) => +r.d === +thisMonth);
+const winter = fc.filter((r) => [10, 11, 0, 1, 2].includes(r.d.getUTCMonth()));
+const wN = d3.sum(winter, (r) => r.normal), wC = d3.sum(winter, (r) => r.cold), wW = d3.sum(winter, (r) => r.warm);
+const peak = d3.greatest(fc, (r) => r.normal);
+return {pm,fmtMon,fmtMonth,hist,fc,last,lastV,now,thisMonth,cur,winter,wN,wC,wW,peak};
+}});
+
+define({id: "d27d852e", inputs: ["display","html","fmtMon","thisMonth","cur","wN","peak","wC","wW","M"], body: (display,html,fmtMon,thisMonth,cur,wN,peak,wC,wW,M) => {
+display(html`<div class="kpis">
+  <div class="kpi"><div class="label">This month (${fmtMon(thisMonth)}), normal weather</div>
+    <div class="value">${cur ? cur.normal.toFixed(1) : "–"}<small>Bcf</small></div>
+    <div class="sub">${cur ? `Likely ${cur.lo90.toFixed(1)}–${cur.hi90.toFixed(1)} Bcf` : "Outside the forecast window"}</div></div>
+  <div class="kpi"><div class="label">Coming winter (Nov–Mar), normal weather</div>
+    <div class="value">${wN.toFixed(0)}<small>Bcf</small></div>
+    <div class="sub">Peak month: ${fmtMon(peak.d)}, ${peak.normal.toFixed(1)} Bcf</div></div>
+  <div class="kpi"><div class="label">If the winter is cold / warm</div>
+    <div class="value">${((wC / wN - 1) * 100) >= 0 ? "+" : ""}${((wC / wN - 1) * 100).toFixed(1)}%</div>
+    <span class="chip">warm: ${((wW / wN - 1) * 100).toFixed(1)}%</span></div>
+  <div class="kpi"><div class="label">Backtest error, ${M.model}</div>
+    <div class="value">${M.mape != null ? M.mape.toFixed(1) + "%" : "–"}</div>
+    <div class="sub">${M.naive_mape != null ? `vs. ${M.naive_mape.toFixed(1)}% for “same month last year”` : "Mean absolute % error"}</div></div>
+</div>`);
+}});
+
+define({id: "71f8f588", inputs: ["display","resize","d3","fc","hist","last","lastV","Plot","fmtMon","cur","peak","fmtMonth"], body: (display,resize,d3,fc,hist,last,lastV,Plot,fmtMon,cur,peak,fmtMonth) => {
+display(resize((width) => {
+  const narrow = width < 560;
+  const end = d3.utcDay.offset(fc.at(-1).d, 20);
+  const yMax = d3.max([...hist.map((r) => r.v), ...fc.map((r) => r.hi90)]) * 1.08;
+  const normalPath = [{d: last, normal: lastV}, ...fc];
+  return Plot.plot({
+    width, height: narrow ? 340 : 420, marginLeft: 44, marginTop: 30, marginRight: 12, style: {fontSize: "12px"},
+    x: {type: "utc", domain: [d3.utcDay.offset(hist[0].d, -15), end], label: null,
+        ticks: d3.utcMonth.every(narrow ? 6 : 3), tickFormat: (d) => narrow ? d3.utcFormat("%b '%y")(d) : d3.utcFormat(d.getUTCMonth() === 0 ? "%b %Y" : "%b")(d)},
+    y: {domain: [0, yMax], grid: true, label: "Bcf per month", labelArrow: "none"},
+    marks: [
+      Plot.rectX([{}], {x1: last, x2: end, y1: 0, y2: yMax, fill: "var(--fc-wash)"}),
+      Plot.ruleX([last], {stroke: "var(--muted)", strokeDasharray: "2,3"}),
+      narrow ? null : Plot.text([`Latest actual · ${fmtMon(last)}`], {x: last, frameAnchor: "top", dy: -20, dx: -6, textAnchor: "end", fill: "var(--muted)", fontSize: 11}),
+      Plot.text(["FORECAST →"], {x: last, frameAnchor: "top", dy: -20, dx: 6, textAnchor: "start", fill: "var(--accent)", fontWeight: 700, fontSize: 11}),
+      Plot.areaY(fc, {x: "d", y1: "lo90", y2: "hi90", fill: "var(--fc-band)", curve: "monotone-x"}),
+      Plot.lineY(hist, {x: "d", y: "v", stroke: "var(--ink)", strokeWidth: 2, curve: "monotone-x"}),
+      Plot.dot(hist, {x: "d", y: "v", r: 2.2, fill: "var(--ink)"}),
+      Plot.lineY(fc, {x: "d", y: "cold", stroke: "var(--cold)", strokeWidth: 1.6, strokeDasharray: "2,3", curve: "monotone-x"}),
+      Plot.lineY(fc, {x: "d", y: "warm", stroke: "var(--warm)", strokeWidth: 1.6, strokeDasharray: "2,3", curve: "monotone-x"}),
+      Plot.lineY(normalPath, {x: "d", y: "normal", stroke: "var(--accent)", strokeWidth: 3.2, strokeDasharray: "7,5", curve: "monotone-x"}),
+      Plot.dot(fc, {x: "d", y: "normal", r: 4.5, fill: "var(--surface)", stroke: "var(--accent)", strokeWidth: 2}),
+      cur ? Plot.dot([cur], {x: "d", y: "normal", r: 10, stroke: "var(--accent)", strokeWidth: 2}) : null,
+      cur ? Plot.text([cur], {x: "d", y: "normal", text: (r) => `This month (${d3.utcFormat("%b")(r.d)}): ${r.normal.toFixed(1)} Bcf`,
+        dx: -14, dy: -18, textAnchor: "end", fill: "var(--accent)", fontWeight: 700, fontSize: 12, stroke: "var(--surface)", strokeWidth: 4, paintOrder: "stroke"}) : null,
+      Plot.text([peak], {x: "d", y: "hi90", text: (r) => `Peak ${d3.utcFormat("%b")(r.d)}: ${r.normal.toFixed(1)} Bcf`, dy: -10,
+        textAnchor: "middle", fill: "var(--muted)", fontSize: 11, stroke: "var(--surface)", strokeWidth: 4, paintOrder: "stroke"}),
+      Plot.tip([...hist.map((r) => ({...r, kind: "Actual"})), ...fc.map((r) => ({...r, v: r.normal, kind: "Forecast"}))],
+        Plot.pointerX({x: "d", y: "v", title: (r) => r.kind === "Actual" ? `${fmtMonth(r.d)}\nActual: ${r.v.toFixed(1)} Bcf`
+          : `${fmtMonth(r.d)} forecast\nNormal weather: ${r.normal.toFixed(1)} Bcf\nCold: ${r.cold.toFixed(1)} · Warm: ${r.warm.toFixed(1)}\nLikely range: ${r.lo90.toFixed(1)}–${r.hi90.toFixed(1)} Bcf`}))
+    ].filter(Boolean)
+  });
+}));
+}});
+
+define({id: "3e8089dc", mode: "inline", inputs: ["fmtMonth","last","display"], body: async (fmtMonth,last,display) => {
+display(await(
+fmtMonth(last)
+))
+}});
+
+define({id: "f1686922", mode: "inline", inputs: ["M","display"], body: async (M,display) => {
+display(await(
+M.model
+))
+}});
+
+define({id: "c7d26c58", mode: "inline", inputs: ["M","display"], body: async (M,display) => {
+display(await(
+M.mmcf_per_hdd?.toFixed(1)
+))
+}});
+
+</script>
+</head>
+<body>
+<input id="observablehq-sidebar-toggle" type="checkbox" title="Toggle sidebar">
+<label id="observablehq-sidebar-backdrop" for="observablehq-sidebar-toggle"></label>
+<nav id="observablehq-sidebar">
+  <ol>
+    <label id="observablehq-sidebar-close" for="observablehq-sidebar-toggle"></label>
+    <li class="observablehq-link"><a href="./">New England Gas Forecast</a></li>
+  </ol>
+  <ol>
+    <li class="observablehq-link"><a href="./">Henry Hub price outlook</a></li>
+    <li class="observablehq-link observablehq-link-active"><a href="./massachusetts-demand">Massachusetts demand</a></li>
+    <li class="observablehq-link"><a href="./massachusetts-gaf">Massachusetts GAF</a></li>
+  </ol>
+</nav>
+<script>{const e=document.querySelector("#observablehq-sidebar"),o=document.querySelector("#observablehq-sidebar-toggle"),r=sessionStorage.getItem("observablehq-sidebar");r?o.checked=r==="true":o.indeterminate=!0;for(const t of document.querySelectorAll("#observablehq-sidebar summary")){const s=t.parentElement;switch(sessionStorage.getItem(`observablehq-sidebar:${t.textContent}`)){case"true":s.open=!0;break;case"false":s.classList.contains("observablehq-section-active")||(s.open=!1);break}}addEventListener("beforeunload",()=>sessionStorage.setItem("observablehq-sidebar-scrolly",`${e.scrollTop}`));const a=sessionStorage.getItem("observablehq-sidebar-scrolly");a!=null&&(e.style.cssText="overflow: hidden;",e.scrollTop=+a,e.style.cssText="");}</script>
+<div id="observablehq-center">
+<main id="observablehq-main" class="observablehq">
+<div class="eyebrow">New England gas forecast · Massachusetts utility demand</div>
+<h1 id="massachusetts-gas-demand-outlook" tabindex="-1"><a class="observablehq-header-anchor" href="#massachusetts-gas-demand-outlook">Massachusetts Gas Demand Outlook</a></h1>
+<p class="lede">Monthly natural gas delivered by Massachusetts utilities to homes, businesses and industry (power plants excluded), with a 12-month forecast under normal, cold and warm weather. EIA publishes the actual figures about two months late, so the forecast starts from the latest published month.</p>
+<div class="observablehq observablehq--block"><!--:776c607f:--></div>
+<div class="observablehq observablehq--block"><!--:59a50031:--></div>
+<div class="observablehq observablehq--block"><!--:d27d852e:--></div>
+<h2 id="recent-demand-and-the-next-12-months" tabindex="-1"><a class="observablehq-header-anchor" href="#recent-demand-and-the-next-12-months">Recent demand and the next 12 months</a></h2>
+<div class="card">
+<div class="legend"><span><i class="sw" style="border-color:var(--ink)"></i>Actual</span><span><i class="sw" style="border-color:var(--accent);border-top-style:dashed;border-top-width:3px"></i>Forecast, normal weather</span><span><i class="sw" style="border-color:var(--cold);border-top-style:dotted"></i>Cold winter</span><span><i class="sw" style="border-color:var(--warm);border-top-style:dotted"></i>Warm winter</span><span><i class="sw box" style="background:var(--fc-band)"></i>Likely range (90%)</span></div>
+<div class="observablehq observablehq--block"><!--:71f8f588:--></div>
+</div>
+<p class="fine">Actual data through <observablehq-loading></observablehq-loading><!--:3e8089dc:-->. The dashed blue line is the <observablehq-loading></observablehq-loading><!--:f1686922:--> forecast with normal weather; the dotted lines are a cold or warm winter (90th and 10th percentile monthly heating degree days over the last 15 years); the band is the likely range from backtest errors at each horizon. Weather sensitivity: about <observablehq-loading></observablehq-loading><!--:c7d26c58:--> MMcf of extra demand per heating degree day.</p>
+<p class="fine">Source: EIA natural gas deliveries to Massachusetts residential, commercial and industrial customers; weather from ERA5 via Open-Meteo.</p>
+</main>
+<footer id="observablehq-footer">
+<div>Data: EIA (Henry Hub spot, storage, LNG exports), CME NYMEX via Yahoo Finance (futures), Massachusetts DPU (GAF/LDAF), NOAA (weather).
+Source code: <a href="https://github.com/cathykam2006/ne-gas-forecast" target="_blank" rel="noopener noreferrer">github.com/cathykam2006/ne-gas-forecast</a>.</div>
+</footer>
+</div>
+</body>
+</html>
