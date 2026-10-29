@@ -6,7 +6,7 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
-from src import config  # noqa: E402
+from src import config, outlook  # noqa: E402
 
 P = str(REPO / "data" / "processed") + "/"
 out = {}
@@ -46,4 +46,12 @@ out["events"] = [{"d": d, "label": l} for d, l in config.EVENTS]
 out["periods"] = [{"a": a, "b": b, "label": l} for a, b, l in config.EVENT_PERIODS]
 out["notes"] = config.EVENT_NOTES
 out["price_data_through"] = meta["price_data_through"]
+po = outlook.price_outlook(REPO / "data" / "processed")
+d8 = lambda d: pd.Timestamp(d).strftime("%Y-%m-%d")
+out["outlook"] = {
+    "model": po["model"], "level": po["level"], "last_date": d8(po["last_date"]), "futures_as_of": po["futures_as_of"],
+    "history": [{"d": d8(r.date), "v": r3(r.price)} for r in po["history"].itertuples()],
+    "path": [{"d": d8(r.date), "f": r3(r.fcst), "lo": r3(r.lo), "hi": r3(r.hi), "h": int(r.h)} for r in po["path"].itertuples()],
+    "futures": [{"d": d8(r.date), "m": r.contract, "v": r3(r.price)} for r in po["futures"].itertuples()],
+}
 json.dump(out, sys.stdout, separators=(",", ":"))

@@ -6,7 +6,7 @@ name: Publish site
 
 on:
   push:
-    branches: [main]
+    branches: [main, site-preview2]
     paths: ["site/**", "data/processed/**", "src/config.py", ".github/workflows/site.yml"]
   workflow_run:
     workflows: ["NYMEX daily update", "Weekly data refresh"]
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -46,12 +46,23 @@ jobs:
         run: |
           npm ci
           npm run build
+      - name: Push build to a branch (preview test only)
+        if: github.ref == 'refs/heads/site-preview2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd site/dist
+          git init -q -b site-build-check
+          git -c user.name=ci -c user.email=ci@example.invalid add -A
+          git -c user.name=ci -c user.email=ci@example.invalid commit -qm build
+          git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" site-build-check
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site/dist
 
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_run'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from src import config
+from src import config, outlook
 from src.nymex import MARKET
 from src.plotting import (GRID, INK, INK_2, MODEL_COLORS, NEUTRAL, SCENARIO_COLORS,
                           SERIES, SURFACE)
@@ -21,6 +21,14 @@ P = config.PROCESSED_DIR
 
 
 # ------------------------------------------------------------------ data
+def _safe(fn, *a):
+    """Forward-looking charts are optional: a missing file hides the chart instead of breaking the app."""
+    try:
+        return fn(*a)
+    except (FileNotFoundError, KeyError, IndexError, ValueError):
+        return None
+
+
 def data_stamp() -> float:
     """Latest change to any processed file. The cache below is keyed on it, so a refresh that
     commits new data shows up on the next page load instead of after an app restart."""
@@ -65,6 +73,8 @@ def load(stamp: float):
         "vm4": opt("price_vs_market_h4.csv", index_col="challenger"),
         "nx_strip": opt("nymex_strip_latest.csv", parse_dates=["as_of", "prior_as_of"]),
         "nx_meta": json.loads((P / "nymex_meta.json").read_text()) if (P / "nymex_meta.json").exists() else {},
+        "po": _safe(outlook.price_outlook, P),
+        "do": _safe(outlook.demand_outlook, P),
     }
 
 
@@ -160,6 +170,114 @@ def scenario_chart(hist: pd.Series, fc: pd.DataFrame, title: str):
 
 
 WINTER_M = [11, 12, 1, 2, 3]
+FC_WASH = "rgba(42,120,214,0.07)"     # background of the forecast zone
+FC_BAND = "rgba(42,120,214,0.18)"     # model uncertainty range
+FUTURES_COLOR = "#0f7b6c"
+
+
+def forecast_zone(fig, start, end, actual_label):
+    """Shade everything after the latest actual and label the split, so forecast reads as forecast."""
+    fig.add_vrect(x0=start, x1=end, fillcolor=FC_WASH, line_width=0, layer="below")
+    fig.add_vline(x=start, line=dict(color=INK_2, width=1.2, dash="dot"))
+    fig.add_annotation(x=start, y=1, yref="paper", text=actual_label, showarrow=False, xanchor="right",
+                       yanchor="bottom", xshift=-4, font=dict(size=11, color=INK_2))
+    fig.add_annotation(x=start, y=1, yref="paper", text="<b>FORECAST →</b>", showarrow=False, xanchor="left",
+                       yanchor="bottom", xshift=6, font=dict(size=11, color=SERIES[0]))
+
+
+def price_outlook_chart(po: dict, months_ahead: int):
+    hist, path, fut = po["history"], po["path"], po["futures"]
+    last = po["last_date"]
+    start, end = last - pd.DateOffset(months=12), last + pd.DateOffset(months=months_ahead)
+    fut = fut[fut["date"] <= end]
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=hist["date"], y=hist["price"], name="Actual (weekly average)",
+                             line=dict(color=INK, width=2), hovertemplate="%{x|%b %d, %Y}: $%{y:.2f}<extra>Actual</extra>"))
+    band = path[path["h"] > 0]
+    fig.add_trace(go.Scatter(x=list(path["date"]) + list(path["date"][::-1]), y=list(path["hi"]) + list(path["lo"][::-1]),
+                             fill="toself", fillcolor=FC_BAND, line=dict(width=0), hoverinfo="skip", mode="lines",
+                             name=f"Likely range ({po['level']:.0%})"))
+    fig.add_trace(go.Scatter(
+        x=path["date"], y=path["fcst"], name=f"Model forecast · {po['model']}", mode="lines+markers",
+        line=dict(color=SERIES[0], width=3.2, dash="dash"),
+        marker=dict(size=[0] + [11] * len(band), color=SURFACE, line=dict(color=SERIES[0], width=2.5)),
+        customdata=np.c_[path["h"], path["lo"], path["hi"]],
+        hovertemplate="%{x|%b %d}: $%{y:.2f} (%{customdata[0]}-week forecast; likely $%{customdata[1]:.2f}–$%{customdata[2]:.2f})<extra></extra>"))
+    p4 = path[path["h"] == path["h"].max()].iloc[0]
+    fig.add_annotation(x=p4["date"], y=p4["hi"], text=f"<b>Model: ${p4['fcst']:.2f} in {int(p4['h'])} wk</b>",
+                       showarrow=True, arrowhead=0, ax=-20, ay=-30, font=dict(size=12, color=SERIES[0]),
+                       arrowcolor=SERIES[0], bgcolor=SURFACE)
+    if len(fut):
+        fig.add_trace(go.Scatter(
+            x=fut["date"], y=fut["price"], name="NYMEX futures (market forecast)", mode="lines+markers",
+            line=dict(color=FUTURES_COLOR, width=2, dash="dot", shape="spline"),
+            marker=dict(symbol="diamond", size=8, color=FUTURES_COLOR),
+            customdata=fut["contract"],
+            hovertemplate="%{x|%B %Y} contract: $%{y:.3f}<extra>NYMEX futures</extra>"))
+        f0 = fut.iloc[0]
+        fig.add_annotation(x=f0["date"], y=f0["price"], text="NYMEX futures", showarrow=True, arrowhead=0, ax=30, ay=36,
+                           font=dict(size=11, color=FUTURES_COLOR), arrowcolor=FUTURES_COLOR)
+    forecast_zone(fig, last, end, f"Latest actual · {last:%b %-d}")
+    today = pd.Timestamp.today().normalize()
+    if last < today < end:
+        fig.add_vline(x=today, line=dict(color=GRID, width=1))
+        fig.add_annotation(x=today, y=0, yref="paper", text="Today", showarrow=False, yanchor="bottom",
+                           xanchor="left", xshift=3, font=dict(size=10, color=INK_2))
+    # keep the forward view readable: cap the axis near the forecast range and flag any spike above it
+    shown = hist[hist["date"] >= start]
+    ymax = max(path["hi"].max(), fut["price"].max() if len(fut) else 0, shown["price"].quantile(0.9)) * 1.25
+    if shown["price"].max() > ymax:
+        pk = shown.loc[shown["price"].idxmax()]
+        fig.add_annotation(x=pk["date"], y=ymax, text=f"↑ ${pk['price']:.2f} week of {pk['date']:%b %-d} (off scale)",
+                           showarrow=False, yanchor="top", xanchor="left", xshift=6, font=dict(size=11, color=INK_2),
+                           bgcolor=SURFACE)
+    fig = style(fig, "Henry Hub: recent price and where it is headed", "$/MMBtu", 440)
+    ymin = min(path["lo"].min(), fut["price"].min() if len(fut) else 9e9, shown["price"].quantile(0.05)) * 0.8
+    fig.update_yaxes(range=[ymin, ymax], tickprefix="$")
+    fig.update_xaxes(range=[start, end + pd.Timedelta(days=10)], dtick="M2" if months_ahead <= 12 else "M3",
+                     tickformat="%b<br>%Y")
+    fig.update_layout(margin=dict(t=80))
+    return fig
+
+
+def demand_outlook_chart(do: dict):
+    hist, fc, last = do["history"], do["forecast"], do["last_actual"]
+    end = fc.index[-1] + pd.DateOffset(days=20)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=hist.index, y=hist, name="Actual", line=dict(color=INK, width=2),
+                             mode="lines+markers", marker=dict(size=4),
+                             hovertemplate="%{x|%b %Y}: %{y:.1f} Bcf<extra>Actual</extra>"))
+    if "lo90" in fc:
+        fig.add_trace(go.Scatter(x=list(fc.index) + list(fc.index[::-1]), y=list(fc["hi90"]) + list(fc["lo90"][::-1]),
+                                 fill="toself", fillcolor=FC_BAND, line=dict(width=0), hoverinfo="skip", mode="lines",
+                                 name="Likely range (90%)"))
+    for s_ in ("cold", "warm"):
+        fig.add_trace(go.Scatter(x=fc.index, y=fc[s_], name=f"{s_.title()} weather", mode="lines",
+                                 line=dict(color=SCENARIO_COLORS[s_], width=1.6, dash="dot"),
+                                 hovertemplate="%{x|%b %Y}: %{y:.1f} Bcf<extra>" + s_.title() + " weather</extra>"))
+    # the normal-weather forecast continues from the latest actual so the hand-off is visible
+    x = [last] + list(fc.index); y = [hist.iloc[-1]] + list(fc["normal"])
+    fig.add_trace(go.Scatter(x=x, y=y, name="Forecast, normal weather", mode="lines+markers",
+                             line=dict(color=SERIES[0], width=3.2, dash="dash"),
+                             marker=dict(size=[0] + [8] * len(fc), color=SURFACE, line=dict(color=SERIES[0], width=2)),
+                             hovertemplate="%{x|%b %Y}: %{y:.1f} Bcf<extra>Forecast, normal weather</extra>"))
+    forecast_zone(fig, last, end, f"Latest actual · {last:%b %Y}")
+    this_month = pd.Timestamp.today().normalize().replace(day=1)
+    if this_month in fc.index:
+        v = fc.at[this_month, "normal"]
+        fig.add_trace(go.Scatter(x=[this_month], y=[v], mode="markers", showlegend=False, hoverinfo="skip",
+                                 marker=dict(size=18, color="rgba(0,0,0,0)", line=dict(color=SERIES[0], width=2))))
+        fig.add_annotation(x=this_month, y=v, text=f"<b>This month ({this_month:%b}): {v:.1f} Bcf</b>",
+                           showarrow=True, arrowhead=0, ax=-70, ay=-40, font=dict(size=11, color=SERIES[0]),
+                           arrowcolor=SERIES[0], bgcolor=SURFACE)
+    peak = fc["normal"].idxmax()
+    fig.add_annotation(x=peak, y=fc.at[peak, "normal"], text=f"Peak {peak:%b}: {fc.at[peak, 'normal']:.1f} Bcf",
+                       showarrow=True, arrowhead=0, ax=50, ay=-28, font=dict(size=11, color=INK_2), arrowcolor=INK_2,
+                       bgcolor=SURFACE)
+    fig = style(fig, f"Massachusetts utility gas demand: recent and next 12 months · {do['model']}", "Bcf per month", 460)
+    fig.update_xaxes(range=[hist.index[0] - pd.DateOffset(days=15), end], dtick="M3", tickformat="%b<br>%Y")
+    fig.update_layout(margin=dict(t=80))
+    return fig
 
 
 D = load(data_stamp())
@@ -194,23 +312,12 @@ with tab_d:
               f"{sc.at[best, 'MAPE %'] - naive:+.1f} pts vs naive", delta_color="inverse")
     c4.metric("Weather sensitivity", f"{m['mmcf_per_hdd']:,.1f} MMcf/HDD")
 
-    hist = dfd["y"].iloc[-36:]
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=hist.index, y=hist / 1000, name="Actual",
-                             line=dict(color=NEUTRAL, width=2)))
-    if "lo90" in fc:
-        fig.add_trace(go.Scatter(x=list(fc.index) + list(fc.index[::-1]),
-                                 y=list(fc["hi90"] / 1000) + list(fc["lo90"][::-1] / 1000),
-                                 fill="toself", fillcolor="rgba(42,120,214,0.15)",
-                                 line=dict(width=0), name="90% interval", hoverinfo="skip"))
-    for s_, dash in (("cold", "dash"), ("normal", "solid"), ("warm", "dash")):
-        fig.add_trace(go.Scatter(x=fc.index, y=fc[s_] / 1000, name=f"{s_.title()} weather",
-                                 line=dict(color=SCENARIO_COLORS[s_], width=2.5 if s_ == "normal" else 1.8,
-                                           dash=dash)))
-    st.plotly_chart(style(fig, f"Massachusetts utility gas demand, 12-month forecast · {best}", "Bcf per month"),
-                    width="stretch")
-    st.caption(f"Data through {m['demand_data_through']}. Cold/warm = 90th/10th percentile "
-               "monthly HDD over the last 15 years. Interval from backtest errors at each horizon.")
+    if D["do"] is not None:
+        st.plotly_chart(demand_outlook_chart(D["do"]), width="stretch")
+    st.caption(f"Actual data through {m['demand_data_through']} (EIA publishes about two months late), so the "
+               "shaded forecast zone starts there. Dashed blue = forecast with normal weather; dotted = a cold or "
+               "warm winter (90th/10th percentile monthly HDD over the last 15 years); the band is the likely "
+               "range from backtest errors at each horizon.")
 
     a, b = st.columns(2)
     with a:
@@ -558,6 +665,18 @@ with tab_t:
 
 with tab_p:
     lat = D["latest"]
+    if D["po"] is not None:
+        st.subheader("Where the Henry Hub price is headed")
+        ahead = st.radio("Look ahead", ["Next 12 months", "Next 24 months"], horizontal=True, key="po_ahead")
+        st.plotly_chart(price_outlook_chart(D["po"], 12 if ahead.startswith("Next 12") else 24), width="stretch")
+        po = D["po"]
+        fa = f", as of {pd.Timestamp(po['futures_as_of']):%b %-d}" if po["futures_as_of"] else ""
+        st.caption(f"Solid line: actual weekly price through {po['last_date']:%b %-d, %Y}. Dashed blue: the "
+                   f"{po['model']} model's 1- and 4-week forecasts, with the range that held "
+                   f"{po['level']:.0%} of the time in its walk-forward backtest. Dotted green: NYMEX futures by "
+                   f"delivery month{fa}, the price the market will lock in today for each future month.")
+        st.divider()
+    st.subheader("Forecast track record")
     h_choice = st.radio("Horizon", ["1 week", "4 weeks"], horizontal=True, index=1)
     h = 1 if h_choice.startswith("1") else 4
     ps = D["ps1"] if h == 1 else D["ps4"]

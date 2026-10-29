@@ -12,6 +12,10 @@
   --peak: #0f6e6e;        /* peak GAF months */
   --ldaf: #8aa9e6;
   --pos: #0f6e6e; --neg: #b4492d; --chip-bg: #eef1f5;
+  --fc-wash: rgba(31,95,209,.06);   /* forecast zone */
+  --fc-band: rgba(31,95,209,.18);   /* forecast likely range */
+  --futures: #0f7b6c;
+  --cold: #6250d6; --warm: #d0602e;
   --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
   --font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -22,7 +26,9 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0e131a; --surface: #151c25; --ink: #e8edf3; --muted: #95a1b0; --rule: #26303c;
   --accent: #6ea2ff; --actual: #c3cad3; --event: #f0a43a; --event-wash: rgba(240,164,58,.13);
-  --peak: #4cc3bd; --ldaf: #3d5f9e; --pos: #4cc3bd; --neg: #f08a6c; --chip-bg: #1d2631; color-scheme: dark; } }
+  --peak: #4cc3bd; --ldaf: #3d5f9e; --pos: #4cc3bd; --neg: #f08a6c; --chip-bg: #1d2631;
+  --fc-wash: rgba(110,162,255,.07); --fc-band: rgba(110,162,255,.22); --futures: #4cc3bd;
+  --cold: #a99bff; --warm: #f08a6c; color-scheme: dark; } }
 
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); }
 #observablehq-main { max-width: 1120px; }
