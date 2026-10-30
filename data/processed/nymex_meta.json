@@ -1,11 +1,11 @@
 {
-  "nymex_front_through": "2026-10-28",
-  "nymex_front_last": 3.03,
-  "nymex_strip_as_of": "2026-10-28",
+  "nymex_front_through": "2026-10-29",
+  "nymex_front_last": 2.9,
+  "nymex_strip_as_of": "2026-10-29",
   "nymex_winter_strip": {
     "label": "Nov 2026\u2013Apr 2027 (remaining 5 months)",
     "months": 5,
-    "mmbtu": 2.9036,
-    "therm": 0.2904
+    "mmbtu": 2.8164,
+    "therm": 0.2816
   }
 }
