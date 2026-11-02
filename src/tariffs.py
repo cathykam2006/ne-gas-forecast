@@ -17,6 +17,7 @@ each company's rate case and are not part of these files.
 """
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -273,6 +274,8 @@ def download(raw_dir: Path = config.RAW_DIR) -> tuple[Path, Path]:
         except Exception as e:
             FAILED.append(name)
             print(f"  could not download {name} ({e}); keeping the previous copy at {p}")
+            if os.environ.get("GITHUB_ACTIONS"):          # surface the reason on the run page
+                print(f"::error title=DPU download failed::{name} from {url}: {e}")
         out.append(p)
     return out[0], out[1]
 
