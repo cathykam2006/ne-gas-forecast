@@ -92,6 +92,12 @@ def test_rate_class_mapping():
     assert classify("G-41, 42, 43 & G-51, 52, 53") == ["Small C&I", "Medium C&I", "Large C&I"]
     assert classify("Large C&I (G43/G53/T-1)") == ["Large C&I"]
     assert classify("R-2, R-4") == []          # low-income only
+    # Peak/Winter 2026-2027 page labels: standard R-1/R-3 grouped, low-income on their own rows
+    assert classify("Residential (R-1, R-3)") == ["Residential heating", "Residential non-heating"]
+    assert classify("R1, R3") == ["Residential heating", "Residential non-heating"]
+    assert classify("Residential (R-3)") == ["Residential heating"]
+    assert classify("Residential (R-1)") == ["Residential non-heating"]
+    assert classify("Residential (R-2)") == [] and classify("Residential (R-4)") == []
     assert canonical_company("KEYSPAN - BOSTON GAS") == "National Grid – Boston Gas"
     assert canonical_company("NSTAR Gas d/b/a Eversource Energy") == "NSTAR Gas (Eversource)"
     assert canonical_company("Eversource Gas Company of Massachusetts (formerly Bay State Gas "

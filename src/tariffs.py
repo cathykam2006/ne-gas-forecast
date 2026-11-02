@@ -64,9 +64,12 @@ def canonical_company(name: str) -> str | None:
 def classify(rate_class: str) -> list[str]:
     """Map a tariff rate-class label to standard categories (may be several).
 
-    R-1/R-2 = residential non-heating, R-3/R-4 = residential heating
-    (R-2/R-4 are the low-income versions). G-4x/G-5x = C&I with high/low
-    winter use; the second digit sets size: 0-1 small, 2 medium, 3 large.
+    R-1 = residential non-heating, R-3 = residential heating; R-2/R-4 are
+    their low-income versions and are left out, so each category is the
+    standard rate. A row may group classes ("R-1, R-2", "R-1, R-3",
+    "R-3, R-4"); it counts for every standard class it names. G-4x/G-5x =
+    C&I with high/low winter use; the second digit sets size: 0-1 small,
+    2 medium, 3 large.
     """
     s = str(rate_class).upper()
     if "RESIDENTIAL" in s and not re.search(r"R-?\s?\d", s.replace("RESIDENTIAL", "")) \
@@ -74,14 +77,12 @@ def classify(rate_class: str) -> list[str]:
         return ["Residential heating", "Residential non-heating"]
     r = {int(d) for d in re.findall(r"R-?\.?\s?(\d)", s)}
     if r:
-        heat, nonheat = bool(r & {3, 4}), bool(r & {1, 2})
-        if heat and not nonheat:
-            return ["Residential heating"]
-        if nonheat and not heat:
-            return ["Residential non-heating"]
-        if r == {1, 3}:          # a typo in a few sheets for "R-1, R-2"
-            return ["Residential non-heating"]
-        return []                # e.g. "R-2, R-4": low-income only
+        cats = []
+        if 3 in r:
+            cats.append("Residential heating")
+        if 1 in r:
+            cats.append("Residential non-heating")
+        return cats              # [] for low-income-only rows such as "R-2", "R-4", "R-2, R-4"
     if re.fullmatch(r"\s*(C&I|C&I AND OTHER)\s*", s):
         return ["Small C&I", "Medium C&I", "Large C&I"]
     if "SMALL C&I" in s:
