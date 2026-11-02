@@ -255,18 +255,36 @@ def henry_hub_per_therm(henry_hub_daily: pd.Series) -> pd.Series:
 
 
 FAILED: list[str] = []      # downloads that failed in this run (checked by --strict)
+BROWSER_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                   "Chrome/130.0.0.0 Safari/537.36"),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+def _get(url: str):
+    """mass.gov rejects many automated clients (HTTP 403). Try plain requests with browser headers,
+    then curl_cffi, which presents the same TLS fingerprint as Chrome, if it is installed."""
+    r = requests.get(url, headers=BROWSER_HEADERS, timeout=60)
+    if r.status_code == 403:
+        try:
+            from curl_cffi import requests as cf
+        except ImportError:
+            r.raise_for_status()
+        r = cf.get(url, impersonate="chrome", timeout=60)
+    r.raise_for_status()
+    return r
 
 
 def download(raw_dir: Path = config.RAW_DIR) -> tuple[Path, Path]:
     """Fetch both DPU files (public). Saves into data/raw/; a failed download keeps the previous file."""
     raw_dir.mkdir(parents=True, exist_ok=True)
-    headers = {"User-Agent": "Mozilla/5.0 (research; ne-gas-forecast)"}
     out = []
     for url, name in ((WORKBOOK_URL, WORKBOOK_FILE), (PAGE_URL, PAGE_FILE)):
         p = raw_dir / name
         try:
-            r = requests.get(url, headers=headers, timeout=60)
-            r.raise_for_status()
+            r = _get(url)
             if name == PAGE_FILE and "GAF" not in r.text:
                 raise ValueError("page downloaded but has no GAF tables (layout or URL changed?)")
             p.write_bytes(r.content)

@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install "pandas>=2.2" "numpy>=2.0" requests beautifulsoup4 openpyxl
+      - run: pip install "pandas>=2.2" "numpy>=2.0" requests beautifulsoup4 openpyxl "curl_cffi>=0.7"
       - name: Download DPU files and rebuild the GAF/LDAF tables
         run: python -m src.tariffs --strict
       - name: Commit if anything changed
