@@ -615,6 +615,11 @@ with tab_t:
         cur = t[t["month"] == latest_m].dropna(subset=["gaf_therm"]).sort_values("total_therm")
         hh_now = hh["henry_hub_therm"].dropna()
         st.markdown(f"**Rates in effect {latest_m:%B %Y}** · {cat} · $/therm")
+        rev = pd.to_datetime(cur["effective"]).max()
+        season = "Peak/winter" if rev.month in (11, 12, 1, 2, 3, 4) else "Off-peak/summer"
+        st.caption(f"Latest DPU revision: effective {rev:%B %-d, %Y} ({season} season). Checked against the "
+                   "[DPU rates page](https://www.mass.gov/info-details/information-on-gas-supply-and-delivery-charges) "
+                   "twice each weekday; new revisions appear here automatically.")
         tbl = cur.set_index("company")[["gaf_therm", "ldaf_therm", "total_therm"]]
         tbl.columns = ["GAF (supply)", "LDAF (delivery adjustments)", "GAF + LDAF"]
         st.dataframe(tbl.style.format("{:.4f}"), width="stretch")

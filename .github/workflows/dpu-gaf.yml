@@ -1,0 +1,46 @@
+# DPU GAF/LDAF update: checks the Massachusetts DPU "Information on Gas Supply and Delivery Charges"
+# page and the historical GAF/LDAF workbook twice each weekday and commits the rebuilt tables when
+# a new revision appears (peak/off-peak seasons and mid-season revisions). The Streamlit app and the
+# dashboard site pick the new files up automatically. A failed download fails the job, so GitHub
+# emails you instead of the app quietly keeping old rates.
+name: DPU GAF update
+
+on:
+  schedule:
+    - cron: "17 14 * * 1-5"   # weekdays 14:17 UTC (9:17 am EST / 10:17 am EDT)
+    - cron: "17 21 * * 1-5"   # weekdays 21:17 UTC (4:17 pm EST / 5:17 pm EDT)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-commits          # never commit at the same time as the other data workflows
+  cancel-in-progress: false
+
+jobs:
+  gaf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "pandas>=2.2" "numpy>=2.0" requests beautifulsoup4 openpyxl
+      - name: Download DPU files and rebuild the GAF/LDAF tables
+        run: python -m src.tariffs --strict
+      - name: Commit if anything changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/processed/ma_gaf_ldaf_filed.csv data/processed/ma_gaf_ldaf_monthly.csv
+          if git diff --cached --quiet; then
+            echo "No new GAF/LDAF revision."
+            exit 0
+          fi
+          git add data/raw/gaf_rates_page.html data/raw/gaf_history.xlsx
+          latest=$(python -c "import pandas as pd; print(pd.read_csv('data/processed/ma_gaf_ldaf_filed.csv')['effective'].max())")
+          git commit -m "DPU GAF/LDAF update (latest revision effective ${latest})"
+          git pull --rebase origin main
+          git push

@@ -61,7 +61,7 @@ const peakAvg = d3.mean(peakStrip, (r) => r.therm);
 
 ## Rates in effect, ${fmtMonth(latest)}
 
-<p class="fine">${cat}, $/therm, sorted from lowest to highest. The bar shows GAF + LDAF.</p>
+<p class="fine">${cat}, $/therm, sorted from lowest to highest. The bar shows GAF + LDAF. Latest DPU revision: effective ${d3.utcFormat("%B %-d, %Y")(d3.utcParse("%Y-%m-%d")(M.latest_revision))} (${[10, 11, 0, 1, 2, 3].includes(d3.utcParse("%Y-%m-%d")(M.latest_revision).getUTCMonth()) ? "peak/winter" : "off-peak/summer"} season), checked against the <a href="https://www.mass.gov/info-details/information-on-gas-supply-and-delivery-charges">DPU rates page</a> twice each weekday.</p>
 
 ```js
 {

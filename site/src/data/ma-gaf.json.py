@@ -25,5 +25,6 @@ out = {
     "strip": [{"m": r.contract, "therm": r4(r.settle_therm)} for r in strip.itertuples()],
     "strip_as_of": nm.get("nymex_strip_as_of"),
     "latest_month": t["month"].max().strftime("%Y-%m"),
+    "latest_revision": pd.to_datetime(t["effective"]).max().strftime("%Y-%m-%d"),
 }
 json.dump(out, sys.stdout, separators=(",", ":"))

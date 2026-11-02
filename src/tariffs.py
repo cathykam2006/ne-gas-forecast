@@ -12,7 +12,8 @@ Source: Massachusetts DPU, "Information on Gas Supply and Delivery Charges"
 Both are public. Base distribution rates and customer charges are set in
 each company's rate case and are not part of these files.
 
-    python -m src.tariffs        # download both files and build the tables
+    python -m src.tariffs            # download both files and build the tables
+    python -m src.tariffs --strict   # same, but exit with an error if a download fails (used by CI)
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ import requests
 
 from . import config
 
-PAGE_URL = "https://www.mass.gov/info-details/cost-of-gas-adjustment-factor-rates-and-information"
+PAGE_URL = "https://www.mass.gov/info-details/information-on-gas-supply-and-delivery-charges"
 WORKBOOK_URL = "https://www.mass.gov/doc/historical-gafldaf-rates-and-data/download"
 PAGE_FILE = "gaf_rates_page.html"
 WORKBOOK_FILE = "gaf_history.xlsx"
@@ -252,8 +253,11 @@ def henry_hub_per_therm(henry_hub_daily: pd.Series) -> pd.Series:
     return (henry_hub_daily.resample("MS").mean() / 10).rename("henry_hub_therm")
 
 
+FAILED: list[str] = []      # downloads that failed in this run (checked by --strict)
+
+
 def download(raw_dir: Path = config.RAW_DIR) -> tuple[Path, Path]:
-    """Fetch both DPU files (public). Saves into data/raw/."""
+    """Fetch both DPU files (public). Saves into data/raw/; a failed download keeps the previous file."""
     raw_dir.mkdir(parents=True, exist_ok=True)
     headers = {"User-Agent": "Mozilla/5.0 (research; ne-gas-forecast)"}
     out = []
@@ -262,10 +266,13 @@ def download(raw_dir: Path = config.RAW_DIR) -> tuple[Path, Path]:
         try:
             r = requests.get(url, headers=headers, timeout=60)
             r.raise_for_status()
+            if name == PAGE_FILE and "GAF" not in r.text:
+                raise ValueError("page downloaded but has no GAF tables (layout or URL changed?)")
             p.write_bytes(r.content)
             print(f"  saved {name}")
         except Exception as e:
-            print(f"  could not download {name} ({e}); save it by hand to {p}")
+            FAILED.append(name)
+            print(f"  could not download {name} ({e}); keeping the previous copy at {p}")
         out.append(p)
     return out[0], out[1]
 
@@ -277,10 +284,14 @@ def run(raw_dir: Path = config.RAW_DIR, out_dir: Path = config.PROCESSED_DIR,
     table = build_rate_table(wb, page)
     out_dir.mkdir(parents=True, exist_ok=True)
     table.drop(columns="categories").to_csv(out_dir / "ma_gaf_ldaf_filed.csv", index=False)
-    monthly = monthly_factors(table)
+    # a rate stays in force until the next revision, so carry the latest one to the current month
+    this_month = pd.Timestamp.today().normalize().replace(day=1)
+    end = max(table["effective"].max(), this_month)
+    monthly = monthly_factors(table, end=str(end.date()))
     monthly.to_csv(out_dir / "ma_gaf_ldaf_monthly.csv", index=False)
     print(f"  {len(table)} filed rows, {table['effective'].nunique()} revisions, "
-          f"{table['effective'].min():%Y-%m} to {table['effective'].max():%Y-%m}")
+          f"{table['effective'].min():%Y-%m} to {table['effective'].max():%Y-%m} (latest revision "
+          f"effective {table['effective'].max():%b %-d, %Y})")
     return monthly
 
 
@@ -288,3 +299,5 @@ if __name__ == "__main__":
     import sys
 
     run(fetch="--no-download" not in sys.argv)
+    if "--strict" in sys.argv and FAILED:
+        sys.exit(f"Download failed: {', '.join(FAILED)}")

@@ -9,7 +9,7 @@ on:
     branches: [main]
     paths: ["site/**", "data/processed/**", "src/config.py", ".github/workflows/site.yml"]
   workflow_run:
-    workflows: ["NYMEX daily update", "Weekly data refresh"]
+    workflows: ["NYMEX daily update", "Weekly data refresh", "DPU GAF update"]
     types: [completed]
     branches: [main]
   workflow_dispatch:

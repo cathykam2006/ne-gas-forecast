@@ -92,7 +92,7 @@ Predecessor filings are merged into successors (Colonial → Boston Gas, Columbi
 - **GAF** (Gas Adjustment Factor) recovers gas supply, interstate transportation and storage costs dollar-for-dollar; set per peak/off-peak season with mid-season revisions.
 - **LDAF** (Local Distribution Adjustment Factor) recovers distribution program costs (energy efficiency from 2025/26, GSEP pipe replacement, environmental response, residential assistance and others).
 
-`src/tariffs.py` parses the DPU's current-rates page and historical workbook (6,700+ filed rates, 170 revisions, May 2008 onward) into monthly <span>$</span>/therm factors for each company and rate category (residential heating/non-heating, small/medium/large C&I), maps predecessor names (Bay State/Columbia → Eversource Gas of MA; KeySpan → National Grid; New England Gas → Liberty), converts <span>$</span>/Ccf rates to <span>$</span>/therm, and compares GAF with the Henry Hub price. Base distribution rates and customer charges are set in rate cases and are not included.
+`src/tariffs.py` (checked twice each weekday by `dpu-gaf.yml`, so new revisions appear the day they are posted) parses the DPU's current-rates page and historical workbook (6,700+ filed rates, 170 revisions, May 2008 onward) into monthly <span>$</span>/therm factors for each company and rate category (residential heating/non-heating, small/medium/large C&I), maps predecessor names (Bay State/Columbia → Eversource Gas of MA; KeySpan → National Grid; New England Gas → Liberty), converts <span>$</span>/Ccf rates to <span>$</span>/therm, and compares GAF with the Henry Hub price. Base distribution rates and customer charges are set in rate cases and are not included.
 
 ### Leakage controls (unit-tested in `tests/`)
 - Storage enters with a one-week lag (the report for week *t* is released the following Thursday).
@@ -133,6 +133,7 @@ Predecessor filings are merged into successors (Colonial → Boston Gas, Columbi
 └── .github/workflows/
     ├── refresh.yml             weekly: all data, models and forecasts (Fridays)
     ├── nymex-daily.yml         weekdays after settlement: NYMEX futures only
+    ├── dpu-gaf.yml             twice each weekday: new DPU GAF/LDAF revisions
     ├── site.yml                rebuilds and publishes the dashboard site after each data update
     └── keep-awake.yml          every 6 hours: keeps the Streamlit app from sleeping
 ```
