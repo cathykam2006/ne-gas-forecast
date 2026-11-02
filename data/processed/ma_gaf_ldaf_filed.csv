@@ -6751,3 +6751,55 @@ effective,company,rate_class,unit,gaf,ldaf,source,gaf_therm,ldaf_therm
 2026-10-01,Unitil – Fitchburg Gas,G-51,$/Therm,0.3014,0.6269,DPU current rates page,0.3014,0.6269
 2026-10-01,Unitil – Fitchburg Gas,G-52,$/Therm,0.3014,0.4667,DPU current rates page,0.3014,0.4667
 2026-10-01,Unitil – Fitchburg Gas,G-53,$/Therm,0.3014,0.4309,DPU current rates page,0.3014,0.4309
+2026-11-01,Berkshire Gas,"Residential (R-1, R-3)",$/Therm,1.0048,0.5305,DPU current rates page,1.0048,0.5305
+2026-11-01,Berkshire Gas,"Residential (R-2, R-4)",$/Therm,1.0048,0.4113,DPU current rates page,1.0048,0.4113
+2026-11-01,Berkshire Gas,G-41/G-51,$/Therm,1.0048,0.3492,DPU current rates page,1.0048,0.3492
+2026-11-01,Berkshire Gas,G-42/G-52,$/Therm,1.0048,0.2865,DPU current rates page,1.0048,0.2865
+2026-11-01,Berkshire Gas,G-43/G-53,$/Therm,1.0048,0.2461,DPU current rates page,1.0048,0.2461
+2026-11-01,Berkshire Gas,T-54,$/Therm,1.0048,0.0228,DPU current rates page,1.0048,0.0228
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),Residential (R-1),$/Therm,0.8151,0.6299,DPU current rates page,0.8151,0.6299
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),Residential (R-2),$/Therm,0.8151,0.4027,DPU current rates page,0.8151,0.4027
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),Residential (R-3),$/Therm,0.9447,0.6299,DPU current rates page,0.9447,0.6299
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),Residential (R-4),$/Therm,0.9447,0.4027,DPU current rates page,0.9447,0.4027
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),G-40,$/Therm,0.9447,0.4022,DPU current rates page,0.9447,0.4022
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),G-41,$/Therm,0.9447,0.2938,DPU current rates page,0.9447,0.2938
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),G-42,$/Therm,0.9447,0.3369,DPU current rates page,0.9447,0.3369
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),G-43,$/Therm,0.9447,0.2916,DPU current rates page,0.9447,0.2916
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),G-50,$/Therm,0.8151,0.4022,DPU current rates page,0.8151,0.4022
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),G-51,$/Therm,0.8151,0.2938,DPU current rates page,0.8151,0.2938
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),G-52,$/Therm,0.8151,0.3369,DPU current rates page,0.8151,0.3369
+2026-11-01,Eversource Gas of MA (fmr. Bay State/Columbia),G-53,$/Therm,0.8151,0.2916,DPU current rates page,0.8151,0.2916
+2026-11-01,Liberty – Blackstone,"Residential (R-1, R-3)",$/Therm,1.357,0.392,DPU current rates page,1.357,0.392
+2026-11-01,Liberty – Blackstone,"Residential (R-2, R-4)",$/Therm,1.357,0.0877,DPU current rates page,1.357,0.0877
+2026-11-01,Liberty – Blackstone,"G-41, G-42, G-43",$/Therm,1.357,0.5875,DPU current rates page,1.357,0.5875
+2026-11-01,Liberty – Blackstone,"G-51, G-52, G-53",$/Therm,1.357,0.5546,DPU current rates page,1.357,0.5546
+2026-11-01,Liberty – Fall River/N. Attleboro,"Residential (R-1, R-3)",$/Therm,0.912,0.5417,DPU current rates page,0.912,0.5417
+2026-11-01,Liberty – Fall River/N. Attleboro,"Residential (R-2, R-4)",$/Therm,0.912,0.2374,DPU current rates page,0.912,0.2374
+2026-11-01,Liberty – Fall River/N. Attleboro,"G-41, G-42, G-43",$/Therm,0.912,0.7099,DPU current rates page,0.912,0.7099
+2026-11-01,Liberty – Fall River/N. Attleboro,"G-51, G-52, G-53",$/Therm,0.912,0.6042,DPU current rates page,0.912,0.6042
+2026-11-01,NSTAR Gas (Eversource),"Residential (R-1, R-3)",$/Therm,0.8644,0.7434,DPU current rates page,0.8644,0.7434
+2026-11-01,NSTAR Gas (Eversource),"Residential (R-2, R-4)",$/Therm,0.8644,0.5718,DPU current rates page,0.8644,0.5718
+2026-11-01,NSTAR Gas (Eversource),"G-41, G-51",$/Therm,0.8644,0.5085,DPU current rates page,0.8644,0.5085
+2026-11-01,NSTAR Gas (Eversource),"G-42, G-52",$/Therm,0.8644,0.4254,DPU current rates page,0.8644,0.4254
+2026-11-01,NSTAR Gas (Eversource),"Large C&I G-43, G-53",$/Therm,0.8644,0.3376,DPU current rates page,0.8644,0.3376
+2026-11-01,National Grid – Boston Gas,"Residential (R-1, R-3)",$/Therm,0.9809,0.6809,DPU current rates page,0.9809,0.6809
+2026-11-01,National Grid – Boston Gas,"Residential (R-2, R-4)",$/Therm,0.9809,0.5452,DPU current rates page,0.9809,0.5452
+2026-11-01,National Grid – Boston Gas,"G-41B/E, G-51B/E",$/Therm,0.9809,0.4779,DPU current rates page,0.9809,0.4779
+2026-11-01,National Grid – Boston Gas,"G-42B/E, G-52B/E",$/Therm,0.9809,0.4201,DPU current rates page,0.9809,0.4201
+2026-11-01,National Grid – Boston Gas,"G-43B/E, G-53B/E",$/Therm,0.9809,0.3998,DPU current rates page,0.9809,0.3998
+2026-11-01,National Grid – Boston Gas,"G-44B, G-54B",$/Therm,0.4207,0.3404,DPU current rates page,0.4207,0.3404
+2026-11-01,National Grid – Colonial Gas,"Residential (R-1, R-3)",$/Therm,0.9809,0.5039,DPU current rates page,0.9809,0.5039
+2026-11-01,National Grid – Colonial Gas,"Residential (R-2, R-4)",$/Therm,0.9809,0.3682,DPU current rates page,0.9809,0.3682
+2026-11-01,National Grid – Colonial Gas,"G-41, G-51",$/Therm,0.9809,0.2983,DPU current rates page,0.9809,0.2983
+2026-11-01,National Grid – Colonial Gas,"G-42, G-52",$/Therm,0.9809,0.2816,DPU current rates page,0.9809,0.2816
+2026-11-01,National Grid – Colonial Gas,"G-43, G-53",$/Therm,0.9809,0.2307,DPU current rates page,0.9809,0.2307
+2026-11-01,Unitil – Fitchburg Gas,Residential (R-1),$/Therm,0.5554,1.1637,DPU current rates page,0.5554,1.1637
+2026-11-01,Unitil – Fitchburg Gas,Residential (R-2),$/Therm,0.5554,0.7074,DPU current rates page,0.5554,0.7074
+2026-11-01,Unitil – Fitchburg Gas,Residential (R-3),$/Therm,0.7868,1.1637,DPU current rates page,0.7868,1.1637
+2026-11-01,Unitil – Fitchburg Gas,Residential (R-4),$/Therm,0.7868,0.7074,DPU current rates page,0.7868,0.7074
+2026-11-01,Unitil – Fitchburg Gas,G-41,$/Therm,0.7868,0.8138,DPU current rates page,0.7868,0.8138
+2026-11-01,Unitil – Fitchburg Gas,G-42,$/Therm,0.7868,0.5474,DPU current rates page,0.7868,0.5474
+2026-11-01,Unitil – Fitchburg Gas,G-43,$/Therm,0.7868,0.4911,DPU current rates page,0.7868,0.4911
+2026-11-01,Unitil – Fitchburg Gas,G-51,$/Therm,0.5554,0.8138,DPU current rates page,0.5554,0.8138
+2026-11-01,Unitil – Fitchburg Gas,G-52,$/Therm,0.5554,0.5474,DPU current rates page,0.5554,0.5474
+2026-11-01,Unitil – Fitchburg Gas,G-53,$/Therm,0.5554,0.4911,DPU current rates page,0.5554,0.4911
