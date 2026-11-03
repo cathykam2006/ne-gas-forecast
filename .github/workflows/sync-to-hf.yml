@@ -1,0 +1,48 @@
+name: Sync to Hugging Face Space
+
+# Copies the app to a Hugging Face Space after every push to main and after
+# each data update, so the app also runs at
+# https://<your-hf-username>-ne-gas-forecast.hf.space
+# Needs the repo secret HF_TOKEN (Hugging Face write token). Until it is set,
+# the job does nothing and passes.
+on:
+  push:
+    branches: [main]
+  # data commits made by these jobs don't trigger "push", so follow them too
+  workflow_run:
+    workflows: ["NYMEX daily update", "Weekly data refresh", "DPU GAF update"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main          # always the latest data, including just-committed updates
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install "huggingface_hub>=0.25"
+
+      - name: Upload to the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ne-gas-forecast
+          HF_TITLE: New England Gas Forecast
+          HF_EMOJI: "🔥"
+          HF_SHORT: New England gas demand, supply and price forecasts
+          APP_FILE: app.py
+          HF_EXCLUDE: notebooks,site,tests,scripts,requirements-pipeline.txt
+        run: python .github/scripts/sync_to_hf.py
