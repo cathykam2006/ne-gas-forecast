@@ -186,38 +186,57 @@ def forecast_zone(fig, start, end, actual_label):
 
 
 def price_outlook_chart(po: dict, months_ahead: int):
-    hist, path, fut = po["history"], po["path"], po["futures"]
+    """Two Henry Hub lines, each continuous across the 'latest actual' split:
+    spot (black, actual) running into the model forecast (blue dashed), and
+    NYMEX futures (green): the front-month price in the past, then the futures curve by delivery month."""
+    hist, path, fut, front = po["history"], po["path"], po["futures"], po.get("front", pd.DataFrame())
     last = po["last_date"]
     start, end = last - pd.DateOffset(months=12), last + pd.DateOffset(months=months_ahead)
     fut = fut[fut["date"] <= end]
+    front = front[front["date"] >= start] if len(front) else front
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=hist["date"], y=hist["price"], name="Actual (weekly average)",
-                             line=dict(color=INK, width=2), hovertemplate="%{x|%b %d, %Y}: $%{y:.2f}<extra>Actual</extra>"))
+    # --- NYMEX: past front month + forward curve, one green line
+    if len(front) or len(fut):
+        fig.add_trace(go.Scatter(x=front["date"], y=front["price"], name="NYMEX Henry Hub futures (front month, past)",
+                                 legendgroup="nymex", line=dict(color=FUTURES_COLOR, width=1.6), opacity=0.7,
+                                 hovertemplate="%{x|%b %d, %Y}: $%{y:.2f}<extra>NYMEX front month</extra>"))
+    if len(fut):
+        bridge = front.iloc[-1:] if len(front) else pd.DataFrame(columns=["date", "price"])
+        fig.add_trace(go.Scatter(
+            x=list(bridge["date"]) + list(fut["date"]), y=list(bridge["price"]) + list(fut["price"]),
+            name="NYMEX Henry Hub futures (by delivery month)", legendgroup="nymex", mode="lines+markers",
+            line=dict(color=FUTURES_COLOR, width=2.4, dash="dot", shape="spline"),
+            marker=dict(symbol="diamond", size=[0] * len(bridge) + [8] * len(fut), color=FUTURES_COLOR),
+            customdata=[""] * len(bridge) + list(pd.to_datetime(fut["contract"] + "-01").dt.strftime("%B %Y")),
+            hovertemplate="%{customdata} contract: $%{y:.3f}<extra>NYMEX futures</extra>"))
+        fl = fut.iloc[-1]
+        fig.add_annotation(x=fl["date"], y=fl["price"], text=f"<b>NYMEX {pd.Timestamp(fl['contract'] + '-01'):%b %Y}: ${fl['price']:.2f}</b>",
+                           showarrow=False, xanchor="right", yanchor="bottom", yshift=8, font=dict(size=11, color=FUTURES_COLOR),
+                           bgcolor=SURFACE)
+    # --- Henry Hub spot: actual (black) running into the model forecast (blue)
+    fig.add_trace(go.Scatter(x=hist["date"], y=hist["price"], name="Henry Hub spot, actual (weekly average)",
+                             line=dict(color=INK, width=2.4),
+                             hovertemplate="%{x|%b %d, %Y}: $%{y:.2f}<extra>Henry Hub spot (actual)</extra>"))
     band = path[path["h"] > 0]
     fig.add_trace(go.Scatter(x=list(path["date"]) + list(path["date"][::-1]), y=list(path["hi"]) + list(path["lo"][::-1]),
                              fill="toself", fillcolor=FC_BAND, line=dict(width=0), hoverinfo="skip", mode="lines",
-                             name=f"Likely range ({po['level']:.0%})"))
+                             name=f"Likely range of the model forecast ({po['level']:.0%})"))
     fig.add_trace(go.Scatter(
-        x=path["date"], y=path["fcst"], name=f"Model forecast · {po['model']}", mode="lines+markers",
+        x=path["date"], y=path["fcst"], name=f"Henry Hub spot, model forecast ({po['model']})", mode="lines+markers",
         line=dict(color=SERIES[0], width=3.2, dash="dash"),
         marker=dict(size=[0] + [11] * len(band), color=SURFACE, line=dict(color=SERIES[0], width=2.5)),
         customdata=np.c_[path["h"], path["lo"], path["hi"]],
         hovertemplate="%{x|%b %d}: $%{y:.2f} (%{customdata[0]}-week forecast; likely $%{customdata[1]:.2f}–$%{customdata[2]:.2f})<extra></extra>"))
+    fig.add_trace(go.Scatter(x=[last], y=[po["last_price"]], mode="markers", showlegend=False, hoverinfo="skip",
+                             marker=dict(size=9, color=INK)))
+    fig.add_annotation(x=last, y=po["last_price"], text=f"<b>Spot ${po['last_price']:.2f}</b><br>week of {last:%b %-d}",
+                       showarrow=True, arrowhead=0, ax=-58, ay=34, font=dict(size=11, color=INK), arrowcolor=INK,
+                       bgcolor=SURFACE, align="right")
     p4 = path[path["h"] == path["h"].max()].iloc[0]
     fig.add_annotation(x=p4["date"], y=p4["hi"], text=f"<b>Model: ${p4['fcst']:.2f} in {int(p4['h'])} wk</b>",
                        showarrow=True, arrowhead=0, ax=-20, ay=-30, font=dict(size=12, color=SERIES[0]),
                        arrowcolor=SERIES[0], bgcolor=SURFACE)
-    if len(fut):
-        fig.add_trace(go.Scatter(
-            x=fut["date"], y=fut["price"], name="NYMEX futures (market forecast)", mode="lines+markers",
-            line=dict(color=FUTURES_COLOR, width=2, dash="dot", shape="spline"),
-            marker=dict(symbol="diamond", size=8, color=FUTURES_COLOR),
-            customdata=fut["contract"],
-            hovertemplate="%{x|%B %Y} contract: $%{y:.3f}<extra>NYMEX futures</extra>"))
-        f0 = fut.iloc[0]
-        fig.add_annotation(x=f0["date"], y=f0["price"], text="NYMEX futures", showarrow=True, arrowhead=0, ax=30, ay=36,
-                           font=dict(size=11, color=FUTURES_COLOR), arrowcolor=FUTURES_COLOR)
-    forecast_zone(fig, last, end, f"Latest actual · {last:%b %-d}")
+    forecast_zone(fig, last, end, f"Latest spot price · {last:%b %-d}")
     today = pd.Timestamp.today().normalize()
     if last < today < end:
         fig.add_vline(x=today, line=dict(color=GRID, width=1))
@@ -231,8 +250,9 @@ def price_outlook_chart(po: dict, months_ahead: int):
         fig.add_annotation(x=pk["date"], y=ymax, text=f"↑ ${pk['price']:.2f} week of {pk['date']:%b %-d} (off scale)",
                            showarrow=False, yanchor="top", xanchor="left", xshift=6, font=dict(size=11, color=INK_2),
                            bgcolor=SURFACE)
-    fig = style(fig, "Henry Hub: recent price and where it is headed", "$/MMBtu", 440)
-    ymin = min(path["lo"].min(), fut["price"].min() if len(fut) else 9e9, shown["price"].quantile(0.05)) * 0.8
+    fig = style(fig, "Henry Hub: spot price and NYMEX futures, past year and ahead", "$/MMBtu", 460)
+    ymin = min(path["lo"].min(), fut["price"].min() if len(fut) else 9e9, shown["price"].quantile(0.05),
+               front["price"].quantile(0.05) if len(front) else 9e9) * 0.8
     fig.update_yaxes(range=[ymin, ymax], tickprefix="$")
     fig.update_xaxes(range=[start, end + pd.Timedelta(days=10)], dtick="M2" if months_ahead <= 12 else "M3",
                      tickformat="%b<br>%Y")
@@ -676,10 +696,12 @@ with tab_p:
         st.plotly_chart(price_outlook_chart(D["po"], 12 if ahead.startswith("Next 12") else 24), width="stretch")
         po = D["po"]
         fa = f", as of {pd.Timestamp(po['futures_as_of']):%b %-d}" if po["futures_as_of"] else ""
-        st.caption(f"Solid line: actual weekly price through {po['last_date']:%b %-d, %Y}. Dashed blue: the "
-                   f"{po['model']} model's 1- and 4-week forecasts, with the range that held "
-                   f"{po['level']:.0%} of the time in its walk-forward backtest. Dotted green: NYMEX futures by "
-                   f"delivery month{fa}, the price the market will lock in today for each future month.")
+        st.caption(f"**Black:** Henry Hub spot price, actual weekly average. It stops at {po['last_date']:%b %-d, %Y}, "
+                   f"the latest published week; after that only forecasts exist. **Blue dashed:** the {po['model']} "
+                   f"model's forecast of the spot price 1 and 4 weeks ahead, with the range that held "
+                   f"{po['level']:.0%} of the time in its backtest. **Green:** NYMEX Henry Hub futures; the solid "
+                   f"part is the front-month contract over the past year, the dotted part is today's price for "
+                   f"each future delivery month{fa}, i.e. the market's forecast.")
         st.divider()
     st.subheader("Forecast track record")
     h_choice = st.radio("Horizon", ["1 week", "4 weeks"], horizontal=True, index=1)

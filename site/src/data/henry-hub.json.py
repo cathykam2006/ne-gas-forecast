@@ -53,5 +53,6 @@ out["outlook"] = {
     "history": [{"d": d8(r.date), "v": r3(r.price)} for r in po["history"].itertuples()],
     "path": [{"d": d8(r.date), "f": r3(r.fcst), "lo": r3(r.lo), "hi": r3(r.hi), "h": int(r.h)} for r in po["path"].itertuples()],
     "futures": [{"d": d8(r.date), "m": r.contract, "v": r3(r.price)} for r in po["futures"].itertuples()],
+    "front": [{"d": d8(r.date), "v": r3(r.price)} for r in po["front"].itertuples()],
 }
 json.dump(out, sys.stdout, separators=(",", ":"))

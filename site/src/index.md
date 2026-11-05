@@ -68,11 +68,13 @@ const oEnd = d3.utcMonth.offset(oLast, ahead === "Next 12 months" ? 12 : 24);
 const oStart = d3.utcMonth.offset(oLast, -12);
 const oFut = O.futures.map((r) => ({...r, d: parse(r.d)})).filter((r) => r.d <= oEnd);
 const oShown = oHist.filter((r) => r.d >= oStart);
+const oFront = (O.front ?? []).map((r) => ({d: parse(r.d), v: r.v})).filter((r) => r.d >= oStart);
+const oCurve = [...oFront.slice(-1), ...oFut];      // the futures line continues from today's front month
 const p4 = oPath.at(-1);
 ```
 
 <div class="card">
-<div class="legend"><span><i class="sw" style="border-color:var(--ink)"></i>Actual (weekly average)</span><span><i class="sw" style="border-color:var(--accent);border-top-style:dashed;border-top-width:3px"></i>Model forecast · ${O.model}</span><span><i class="sw box" style="background:var(--fc-band)"></i>Likely range (${Math.round(O.level * 100)}%)</span><span><i class="sw" style="border-color:var(--futures);border-top-style:dotted;border-top-width:3px"></i>NYMEX futures (market forecast)</span></div>
+<div class="legend"><span><i class="sw" style="border-color:var(--ink);border-top-width:3px"></i>Henry Hub spot, actual (weekly average)</span><span><i class="sw" style="border-color:var(--accent);border-top-style:dashed;border-top-width:3px"></i>Henry Hub spot, model forecast · ${O.model}</span><span><i class="sw box" style="background:var(--fc-band)"></i>Likely range (${Math.round(O.level * 100)}%)</span><span><i class="sw" style="border-color:var(--futures)"></i>NYMEX Henry Hub futures, front month (past)</span><span><i class="sw" style="border-color:var(--futures);border-top-style:dotted;border-top-width:3px"></i>NYMEX futures by delivery month (market forecast)</span></div>
 
 ```js
 display(resize((width) => {
@@ -92,21 +94,27 @@ display(resize((width) => {
     marks: [
       Plot.rectX([{}], {x1: oLast, x2: oEnd, y1: yMin, y2: yMax, fill: "var(--fc-wash)"}),
       Plot.ruleX([oLast], {stroke: "var(--muted)", strokeDasharray: "2,3"}),
-      narrow ? null : Plot.text([`Latest actual · ${fmtMD(oLast)}`], {x: oLast, frameAnchor: "top", dy: -20, dx: -6, textAnchor: "end", fill: "var(--muted)", fontSize: 11}),
+      narrow ? null : Plot.text([`Latest spot price · ${fmtMD(oLast)}`], {x: oLast, frameAnchor: "top", dy: -20, dx: -6, textAnchor: "end", fill: "var(--muted)", fontSize: 11}),
       Plot.text(["FORECAST →"], {x: oLast, frameAnchor: "top", dy: -20, dx: 6, textAnchor: "start", fill: "var(--accent)", fontWeight: 700, fontSize: 11}),
       today > oLast && today < oEnd ? Plot.ruleX([today], {stroke: "var(--rule)"}) : null,
       today > oLast && today < oEnd ? Plot.text(["Today"], {x: today, frameAnchor: "bottom", dy: -4, dx: 3, textAnchor: "start", fill: "var(--muted)", fontSize: 10}) : null,
       Plot.areaY(oPath, {x: "d", y1: "lo", y2: (r) => clip(r.hi), fill: "var(--fc-band)", curve: "linear"}),
-      Plot.lineY(oShown, {x: "d", y: (r) => clip(r.v), stroke: "var(--ink)", strokeWidth: 2}),
+      Plot.lineY(oFront, {x: "d", y: (r) => clip(r.v), stroke: "var(--futures)", strokeWidth: 1.6, strokeOpacity: 0.7}),
+      Plot.lineY(oShown, {x: "d", y: (r) => clip(r.v), stroke: "var(--ink)", strokeWidth: 2.4}),
+      Plot.dot([{d: oLast, v: oShown.at(-1).v}], {x: "d", y: "v", r: 4.5, fill: "var(--ink)"}),
+      Plot.text([{d: oLast, v: oShown.at(-1).v}], {x: "d", y: "v", text: (r) => `Spot $${r.v.toFixed(2)}`, dy: 26, dx: 0,
+        textAnchor: "middle", fill: "var(--ink)", fontWeight: 700, fontSize: 11}),
       peak.v > yMax ? Plot.text([peak], {x: "d", y: yMax, text: (r) => `↑ $${r.v.toFixed(2)} week of ${fmtMD(r.d)} (off scale)`,
         textAnchor: "start", dx: 6, dy: 8, fill: "var(--muted)", fontSize: 11}) : null,
       Plot.lineY(oPath, {x: "d", y: "f", stroke: "var(--accent)", strokeWidth: 3.2, strokeDasharray: "7,5"}),
       Plot.dot(oPath.filter((r) => r.h > 0), {x: "d", y: "f", r: 5.5, fill: "var(--surface)", stroke: "var(--accent)", strokeWidth: 2.5}),
       Plot.text([p4], {x: "d", y: "hi", text: (r) => `Model: $${r.f.toFixed(2)} in ${r.h} wk`, dy: -12, textAnchor: "middle",
         fill: "var(--accent)", fontWeight: 700, fontSize: 12, stroke: "var(--surface)", strokeWidth: 4, paintOrder: "stroke"}),
-      Plot.lineY(oFut, {x: "d", y: "v", stroke: "var(--futures)", strokeWidth: 2, strokeDasharray: "2,4", curve: "catmull-rom"}),
+      Plot.lineY(oCurve, {x: "d", y: "v", stroke: "var(--futures)", strokeWidth: 2.4, strokeDasharray: "2,4", curve: "catmull-rom"}),
+      oFut.length && !narrow ? Plot.text([oFut.at(-1)], {x: "d", y: "v", text: (r) => `NYMEX ${d3.utcFormat("%b %Y")(parse(r.m + "-01"))}: $${r.v.toFixed(2)}`,
+        dy: -12, textAnchor: "end", fill: "var(--futures)", fontWeight: 700, fontSize: 11, stroke: "var(--surface)", strokeWidth: 4, paintOrder: "stroke"}) : null,
       Plot.dot(oFut, {x: "d", y: "v", symbol: "diamond", r: 4.5, fill: "var(--futures)"}),
-      oFut.length ? Plot.text([oFut[0]], {x: "d", y: "v", text: () => "NYMEX futures", dy: 18, dx: 6, textAnchor: "start",
+      oFut.length && !narrow ? Plot.text([oFut[0]], {x: "d", y: "v", text: () => "NYMEX futures", dy: 18, dx: 6, textAnchor: "start",
         fill: "var(--futures)", fontWeight: 600, fontSize: 11}) : null,
       Plot.tip([...oShown.map((r) => ({...r, kind: "Actual"})), ...oPath.filter((r) => r.h > 0).map((r) => ({d: r.d, v: r.f, lo: r.lo, hi: r.hi, h: r.h, kind: "Model"})),
                 ...oFut.map((r) => ({...r, kind: "Futures"}))],
@@ -120,7 +128,7 @@ display(resize((width) => {
 
 </div>
 
-<p class="fine">Solid line: actual weekly price through ${fmtD(oLast)}. Dashed blue: the ${O.model} model’s 1- and 4-week forecasts, with the range that held ${Math.round(O.level * 100)}% of the time in its walk-forward backtest. Dotted green: NYMEX futures by delivery month${O.futures_as_of ? `, as of ${fmtMD(parse(O.futures_as_of))}` : ""}, the price the market will lock in today for each future month.</p>
+<p class="fine"><b>Black:</b> Henry Hub spot price, actual weekly average. It stops at ${fmtD(oLast)}, the latest published week; after that only forecasts exist. <b>Blue dashed:</b> the ${O.model} model’s forecast of the spot price 1 and 4 weeks ahead, with the range that held ${Math.round(O.level * 100)}% of the time in its backtest. <b>Green:</b> NYMEX Henry Hub futures; the solid part is the front-month contract over the past year, the dotted part is today’s price for each future delivery month${O.futures_as_of ? ` (as of ${fmtMD(parse(O.futures_as_of))})` : ""}, the market’s forecast.</p>
 
 ## Forecast track record
 

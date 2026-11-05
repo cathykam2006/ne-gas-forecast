@@ -54,8 +54,19 @@ def price_outlook(processed: Path, history_weeks: int = 56, level: float = 0.80)
         futures = pd.DataFrame({
             "date": pd.to_datetime(strip["contract"] + "-15"),          # plotted mid-delivery-month
             "contract": strip["contract"], "price": strip["settle"].astype(float)})
+    # NYMEX front-month history (weekly average, plus the latest close) so the futures line runs
+    # continuously from the past into the forward curve
+    front = pd.DataFrame(columns=["date", "price"])
+    nx = _read(processed, "nymex_daily.csv", index_col=0, parse_dates=True)
+    if nx is not None and "nymex_front" in nx:
+        d = nx["nymex_front"].dropna()
+        d = d[d.index >= hist.index[0] - pd.Timedelta(days=7)]
+        wk = d.resample("W-FRI").mean().dropna()
+        wk = wk[wk.index < d.index[-1]]
+        front = pd.concat([wk, d.iloc[-1:]]).rename("price").reset_index()
+        front.columns = ["date", "price"]
     return {"model": model, "history": hist.rename("price").reset_index().rename(columns={"period": "date"}),
-            "path": pd.DataFrame(path), "futures": futures, "futures_as_of": as_of,
+            "path": pd.DataFrame(path), "futures": futures, "futures_as_of": as_of, "front": front,
             "last_date": last_date, "last_price": last_price, "level": level}
 
 
