@@ -1,16 +1,16 @@
 {
-  "run_at": "2026-11-06T20:48",
+  "run_at": "2026-11-13T21:31",
   "demand_data_through": "2026-08",
-  "price_data_through": "2026-10-30",
+  "price_data_through": "2026-11-13",
   "best_demand_model": "LightGBM",
   "mmcf_per_hdd": 30.44,
-  "nymex_front_through": "2026-11-06",
-  "nymex_front_last": 2.972,
-  "nymex_strip_as_of": "2026-11-06",
+  "nymex_front_through": "2026-11-13",
+  "nymex_front_last": 3.24,
+  "nymex_strip_as_of": "2026-11-13",
   "nymex_winter_strip": {
     "label": "Nov 2026\u2013Apr 2027 (remaining 5 months)",
     "months": 5,
-    "mmbtu": 2.8468,
-    "therm": 0.2847
+    "mmbtu": 2.9784,
+    "therm": 0.2978
   }
 }
