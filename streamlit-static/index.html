@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>New England Gas Forecast App | Cathy Kam</title>
+  <meta name="description" content="Interactive New England natural gas demand and Henry Hub price forecasts. Runs entirely in your browser. Built by Cathy Kam." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@stlite/browser@1.12.3/build/stlite.css" />
+</head>
+<body>
+  <div id="root"></div>
+  <noscript>This app runs Python in your browser, so it needs JavaScript turned on.</noscript>
+  <script type="module">
+    import { mount } from "https://cdn.jsdelivr.net/npm/@stlite/browser@1.12.3/build/stlite.js";
+
+    // The site workflow (.github/workflows/site.yml) copies app.py, src/ and
+    // data/processed/ next to this page and lists them in manifest.json, so the
+    // app always shows the data from the latest site build.
+    const manifest = await (await fetch("./manifest.json", { cache: "no-cache" })).json();
+    const files = {};
+    for (const path of manifest.files) files[path] = { url: `./${path}` };
+
+    mount(
+      {
+        entrypoint: "app.py",
+        requirements: ["pandas", "numpy", "plotly", "matplotlib"],
+        files,
+        // Same theme as .streamlit/config.toml
+        streamlitConfig: {
+          "theme.base": "light",
+          "theme.primaryColor": "#2a78d6",
+          "theme.backgroundColor": "#fcfcfb",
+          "theme.secondaryBackgroundColor": "#f3f2ee",
+          "theme.textColor": "#0b0b0b",
+          "client.toolbarMode": "viewer",
+        },
+      },
+      document.getElementById("root"),
+    );
+  </script>
+</body>
+</html>
